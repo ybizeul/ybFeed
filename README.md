@@ -3,10 +3,10 @@
 In a nutshell, ybFeed is a personnal micro feed where you can post snippets of 
 text or images.
 
-The primary use case is to share information between computers qhere you don't
+The primary use case is to share information between computers where you don't
 have the possibility to copy/paste, like a restricted VDI enviroment.
 
-Open the feed on your local computer and the remote, then everything you add
+Open the feed on your local computer and the remote one, then everything you add
 will be displayed on the other browsers as well.
 
 ### Concepts
