@@ -33,4 +33,4 @@ jobs:
         goarch: ${{ matrix.goarch }}
         retry: 10
         overwrite: true
-        extra_files: LICENSE.txt README.md
+        extra_files: LICENSE README.md
