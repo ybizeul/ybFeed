@@ -13,7 +13,7 @@ export default function Root() {
         setGoToPath("/" + feed)
     }
 
-    if (window.location.pathname != "/") {
+    if (window.location.pathname !== "/") {
         setGoToPath(window.location.pathname)
     }
 
