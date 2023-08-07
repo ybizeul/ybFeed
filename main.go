@@ -2,9 +2,10 @@ package main
 
 import (
 	"embed"
-	"log"
 	"net/http"
 	"os"
+
+	log "github.com/sirupsen/logrus"
 )
 
 //go:embed ui/build
@@ -30,6 +31,10 @@ func main() {
 }
 
 func initialize() {
+	if os.Getenv("DEBUG") != "" {
+		log.SetLevel(log.DebugLevel)
+	}
+
 	// Create data directory
 	dataDir = os.Getenv("YBF_DATADIR")
 	if len(dataDir) == 0 {

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	log "github.com/sirupsen/logrus"
 )
 
 type FeedError struct {
@@ -40,10 +41,12 @@ type Feed struct {
 }
 
 func NewFeed(feedName string) (*Feed, error) {
+	log.Infof("Creating new feed %s", feedName)
 	os.Mkdir(path.Join(dataDir, feedName), 0700)
 	secret := uuid.NewString()
 	err := os.WriteFile(path.Join(dataDir, feedName, "secret"), []byte(secret), 0600)
 	if err != nil {
+		log.Errorf("Unable towrite file %s", err.Error())
 		return nil, err
 	}
 	return &Feed{
@@ -57,6 +60,8 @@ func NewFeed(feedName string) (*Feed, error) {
 func GetFeed(feedName string, secret string) (*Feed, error) {
 	feedPath := path.Join(dataDir, feedName)
 
+	log.Debugf("Getting feed %s with secret[%d]", feedName, len(secret))
+
 	if _, err := os.Stat(feedPath); os.IsNotExist(err) {
 		return nil, &FeedError{
 			Code:    404,
@@ -65,6 +70,7 @@ func GetFeed(feedName string, secret string) (*Feed, error) {
 	}
 
 	if secret == "" {
+		log.Debugf("No secret was provided, returning 401")
 		return nil, &FeedError{
 			Code:    401,
 			Message: "Unauthorized",
