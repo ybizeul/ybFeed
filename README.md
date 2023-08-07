@@ -44,6 +44,7 @@ there is no easy way to retrieve the feed
 the filesystem
 - Logging is pretty much inexistant
 - You cannot currently customize the default port 8080
+- No rate control or capacity limits
 
 ### Building
 
