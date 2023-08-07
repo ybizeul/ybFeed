@@ -1,0 +1,8 @@
+services:
+  ybYaml:
+    image: ybfeed:latest
+    build: .
+    volumes:
+      - ./data:/data
+    ports:
+      - 8080:8080
