@@ -1,105 +1,24 @@
-import { useParams } from 'react-router';
 import { useEffect, useState } from "react"
-import React, { FC } from 'react';
+
+import { useParams } from 'react-router';
 import { Navigate } from 'react-router';
+
 import queryString from 'query-string';
-import { Button, Form, message } from 'antd';
-import { Modal } from 'antd';
 
-import { Input } from 'antd';
-import { Image } from 'antd';
-import YBBreadCrumb from '../YBBreadCrumb'
-
-import { DownOutlined } from '@ant-design/icons';
+import { Button, Form, Input, Modal } from 'antd';
+import { message } from 'antd';
 import type { MenuProps } from 'antd';
 import { Dropdown, Space } from 'antd';
 
 import {
-    FileImageOutlined,
-    FileTextOutlined,
     LinkOutlined,
-    DeleteOutlined,
-    NumberOutlined
+    NumberOutlined,
+    DownOutlined
   } from '@ant-design/icons';
 
-interface FeedItemProps {
-    item: { [key: string]: any },
-    feed: string,
-    onDelete?: (item: string) => void
-}
-
-interface PasteCardProps {
-    empty?: boolean
-}
-const FeedItem: FC<FeedItemProps> = (props: FeedItemProps) => {
-    const [textValue,setTextValue] = useState("")
-
-    useEffect(() => {
-        if (props.item.type === 0) {
-            fetch("/api/feed/"+props.feed+"/"+props.item.name,{
-                credentials: "include"
-              })
-            .then(r => {
-                r.text()
-                .then(t =>
-                    setTextValue(t)
-                )
-            })
-        }
-    })
-    return(
-        <div className='item'>
-        <Heading item={props.item} feed={props.feed} onDelete={props.onDelete}/>
-
-        {(props.item.type === 0)?
-        <pre>{textValue}</pre>
-        :""
-        }
-
-        {(props.item.type === 1)?
-            <div className='center'>
-            <Image
-                className="itemImg"
-                width={600}
-                src={"/api/feed/"+props.feed+"/"+props.item.name}
-                preview={false}
-            />
-            </div>
-            :""
-            }
-        </div>
-    )
-}
-
-const Heading: FC<FeedItemProps> = (props: FeedItemProps) => {
-    const deleteItem = () => {
-        fetch("/api/feed/"+props.feed+"/"+props.item.name,{
-            method: "DELETE",
-            credentials: "include"
-          })
-        .then(r => {
-            r.text()
-            .then(t => {
-                    if (props.onDelete !== null) {
-                        props.onDelete!(props.item.name)
-                    }
-                }
-            )
-        })
-    }
-    return (
-        <div className='heading'>
-        {(props.item.type === 0)?
-        <FileTextOutlined />
-        :""}
-        {(props.item.type === 1)?
-        <FileImageOutlined />
-        :""}
-        &nbsp;{props.item.name}
-        <DeleteOutlined style={{float: 'right', fontSize: '14px'}} onClick={deleteItem} />
-        </div>
-    )
-}
+import YBBreadCrumb from '../YBBreadCrumb'
+import YBPasteCard from '../YBPasteCard'
+import YBFeedItem from '../YBFeedItem'
 
 export default function Feed() {
     const params=useParams()
@@ -107,14 +26,16 @@ export default function Feed() {
     const [feedItems,setFeedItems] = useState([])
     const [secret,setSecret] = useState<string|null>(null)
     const [pinModalOpen,setPinModalOpen] = useState(false)
-    const [authenticated,setAuthenticated] = useState(false)
+    const [authenticated,setAuthenticated] = useState<boolean|undefined>(undefined)
 
+    //
+    // Pasting Data
+    //
     const handleOnPaste = (event: React.ClipboardEvent) => {
         const items = event.clipboardData.items
         var data, type
-        console.log(items)
+
         for (let i=0; i<items.length;i++) {
-            console.log(items[i].type)
             if (items[i].type.indexOf("image") === 0) {
                 type = items[i].type
                 data = items[i].getAsFile()
@@ -126,9 +47,11 @@ export default function Feed() {
                 break
             }
         }
+
         if (type === undefined) {
             return
         }
+
         const requestHeaders: HeadersInit = new Headers();
         requestHeaders.set("Content-Type", type)
         fetch("/api/feed/" + params.feed,{
@@ -137,11 +60,37 @@ export default function Feed() {
             headers: requestHeaders,
             credentials: "include"
           })
-          .then(
-            update
-          )
+          .then(() => {
+             update()
+          })
     }
-    const update = () => {
+
+    //
+    // Creating links to feed
+    //
+    const copyLink = () => {
+        const link = window.location.href + "?secret=" + secret
+        navigator.clipboard.writeText(link)
+        message.info('Link Copied!')
+    }
+
+    //
+    // Delete an item in the feed
+    //
+    const deleteItem = (item: string) => {
+        fetch("/api/feed/"+params.feed+"/"+item,{
+            method: "DELETE",
+            credentials: "include"
+          })
+        .then(r => {
+            update()
+        })
+    }
+
+    //
+    // Update feed is run every 2s or o, some events
+    //
+    function update() {
         fetch("/api/feed/"+params.feed,{
             credentials: "include"
           })
@@ -159,20 +108,6 @@ export default function Feed() {
             else if (r.status === 402) {
                 setAuthenticated(false)
             }
-        })
-    }
-    const copyLink = () => {
-        const link = window.location.href + "?secret=" + secret
-        navigator.clipboard.writeText(link)
-        message.info('Link Copied!')
-    }
-    const deleteItem = (item: string) => {
-        fetch("/api/feed/"+params.feed+"/"+item,{
-            method: "DELETE",
-            credentials: "include"
-          })
-        .then(r => {
-            update()
         })
     }
 
@@ -196,9 +131,10 @@ export default function Feed() {
             return () => {
                 window.clearInterval(interval)
             }
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    ,[])
+            // eslint-disable-next-line react-hooks/exhaustive-deps
+        },[]
+    )
+
     const handleMenuClick: MenuProps['onClick'] = (e) => {
         if (e.key === "1") {
             copyLink()
@@ -249,7 +185,7 @@ export default function Feed() {
         {goTo?
         <Navigate to={goTo} />
         :""}
-        {authenticated?
+        {authenticated===true?
         <Dropdown menu={menuProps}>
             <Button style={{float: 'right'}} >
                 <Space>
@@ -262,7 +198,7 @@ export default function Feed() {
 
         <YBBreadCrumb />
         
-        {authenticated?
+        {authenticated===true?
         <>
         <Modal title="Set Temporary PIN" className="PINModal" open={pinModalOpen} footer={null} onCancel={handlePinModalCancel} destroyOnClose={true}>
             <p>Please choose a PIN, it wille expire after 2 minutes:</p>
@@ -280,14 +216,16 @@ export default function Feed() {
         </Modal>
 
         <div className="pasteCard" onPaste={handleOnPaste}>
-            <PasteCard empty={feedItems.length === 0}/>
+            <YBPasteCard empty={feedItems.length === 0}/>
         </div>
 
         {feedItems.map((f) => 
-            <FeedItem item={f} feed={params.feed!} onDelete={deleteItem}/>
+            <YBFeedItem item={f} feed={params.feed!} onDelete={deleteItem}/>
         )}
         </>
-        :
+        :""}
+
+        {authenticated===false?
         <>
         <p>It doesn't look like you are authorized to view this feed.</p>
         <p>Would you like to authenticate with a PIN?</p>
@@ -303,16 +241,8 @@ export default function Feed() {
                 </Form.Item>
             </Form>
         </>
+        :""
         }
         </>
-    )
-}
-
-const PasteCard: FC<PasteCardProps> = (props:PasteCardProps) => {
-    return (
-            <div className="pasteDiv" tabIndex={0}>
-                {(props.empty === true)?<p>Your feed is empty</p>:""}
-                Paste content here
-            </div>
     )
 }
