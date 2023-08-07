@@ -15,9 +15,10 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node-version }}
-      - run: cd ui
       - run: npm install
+        working-directory: ./ui
       - run: npm run build
+        working-directory: ./ui
 
   release:
     needs: build_ui
