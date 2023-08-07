@@ -1,5 +1,5 @@
 import { useParams } from 'react-router';
-import { EventHandler, useEffect, useState, useRef } from "react"
+import { useEffect, useState } from "react"
 import React, { FC } from 'react';
 import { Navigate } from 'react-router';
 import queryString from 'query-string';
@@ -10,21 +10,17 @@ import { Input } from 'antd';
 import { Image } from 'antd';
 import YBBreadCrumb from '../YBBreadCrumb'
 
-import { DownOutlined, UserOutlined } from '@ant-design/icons';
+import { DownOutlined } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { Dropdown, Space } from 'antd';
 
 import {
     FileImageOutlined,
     FileTextOutlined,
-    FileZipOutlined,
     LinkOutlined,
     DeleteOutlined,
     NumberOutlined
   } from '@ant-design/icons';
-import { URLSearchParams } from 'url';
-
-const { TextArea } = Input;
 
 interface FeedItemProps {
     item: { [key: string]: any },
@@ -39,7 +35,7 @@ const FeedItem: FC<FeedItemProps> = (props: FeedItemProps) => {
     const [textValue,setTextValue] = useState("")
 
     useEffect(() => {
-        if (props.item.type == 0) {
+        if (props.item.type === 0) {
             fetch("/api/feed/"+props.feed+"/"+props.item.name,{
                 credentials: "include"
               })
@@ -55,12 +51,12 @@ const FeedItem: FC<FeedItemProps> = (props: FeedItemProps) => {
         <div className='item'>
         <Heading item={props.item} feed={props.feed} onDelete={props.onDelete}/>
 
-        {(props.item.type == 0)?
+        {(props.item.type === 0)?
         <pre>{textValue}</pre>
         :""
         }
 
-        {(props.item.type == 1)?
+        {(props.item.type === 1)?
             <div className='center'>
             <Image
                 className="itemImg"
@@ -93,10 +89,10 @@ const Heading: FC<FeedItemProps> = (props: FeedItemProps) => {
     }
     return (
         <div className='heading'>
-        {(props.item.type == 0)?
+        {(props.item.type === 0)?
         <FileTextOutlined />
         :""}
-        {(props.item.type == 1)?
+        {(props.item.type === 1)?
         <FileImageOutlined />
         :""}
         &nbsp;{props.item.name}
@@ -112,8 +108,6 @@ export default function Feed() {
     const [secret,setSecret] = useState<string|null>(null)
     const [pinModalOpen,setPinModalOpen] = useState(false)
     const [authenticated,setAuthenticated] = useState(false)
-
-    const [messageApi, contextHolder] = message.useMessage();
 
     const handleOnPaste = (event: React.ClipboardEvent) => {
         const items = event.clipboardData.items
@@ -152,17 +146,17 @@ export default function Feed() {
             credentials: "include"
           })
         .then(r => {
-            if (r.status == 200) {
+            if (r.status === 200) {
                 r.json().then((j) => {
                     setFeedItems(j["items"])
                     setSecret(j["secret"])
                 })
                 setAuthenticated(true)
             }
-            else if (r.status == 401) {
+            else if (r.status === 401) {
                 setAuthenticated(false)
             }
-            else if (r.status == 402) {
+            else if (r.status === 402) {
                 setAuthenticated(false)
             }
         })
@@ -203,6 +197,7 @@ export default function Feed() {
                 window.clearInterval(interval)
             }
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     ,[])
     const handleMenuClick: MenuProps['onClick'] = (e) => {
         if (e.key === "1") {

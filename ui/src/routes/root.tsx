@@ -1,20 +1,14 @@
 import { Navigate } from 'react-router';
 import { Form, Input } from 'antd';
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import YBBreadCrumb from '../YBBreadCrumb'
 
 
 export default function Root() {
     const [feed,setFeed] = useState("")
-    const [password,setPassword] = useState("")
     const [goToPath,setGoToPath] = useState("")
-    
-    const handleFinish = (values: any) => {
-        console.log("finish")
-        setGoToPath("/" + feed + "?secret=" + password)
-    }
 
-    if (window.location.pathname != "/") {
+    if (window.location.pathname !== "/") {
         setGoToPath(window.location.pathname)
     }
 
