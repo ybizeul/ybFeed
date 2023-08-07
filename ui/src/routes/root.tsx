@@ -7,8 +7,13 @@ import YBBreadCrumb from '../YBBreadCrumb'
 export default function Root() {
     const [feed,setFeed] = useState("")
     const [goToPath,setGoToPath] = useState("")
+    
+    const handleFinish = (values: any) => {
+        console.log("finish")
+        setGoToPath("/" + feed)
+    }
 
-    if (window.location.pathname !== "/") {
+    if (window.location.pathname != "/") {
         setGoToPath(window.location.pathname)
     }
 
