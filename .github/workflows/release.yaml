@@ -35,8 +35,6 @@ jobs:
             goos: windows
     steps:
     - uses: actions/checkout@v3
-    - uses: node
-      with:
     - uses: wangyoucao577/go-release-action@v1.35
       with:
         github_token: ${{ secrets.PACKAGE_TOKEN }}
