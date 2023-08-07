@@ -3,25 +3,7 @@ on:
     types: [created]
 
 jobs:
-  build_ui:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [20.x]
-
-    steps:
-      - uses: actions/checkout@v3
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v3
-        with:
-          node-version: ${{ matrix.node-version }}
-      - run: npm install
-        working-directory: ./ui
-      - run: npm run build
-        working-directory: ./ui
-
   release:
-    needs: build_ui
     name: release
     runs-on: ubuntu-latest
     strategy:
@@ -36,6 +18,14 @@ jobs:
             goos: windows
     steps:
     - uses: actions/checkout@v3
+    - name: Use Node.js 20.x
+      uses: actions/setup-node@v3
+      with:
+        node-version: 20.x
+    - run: npm install
+      working-directory: ./ui
+    - run: npm run build
+      working-directory: ./ui
     - uses: wangyoucao577/go-release-action@v1.35
       with:
         github_token: ${{ secrets.PACKAGE_TOKEN }}
