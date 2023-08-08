@@ -8,6 +8,8 @@ ui:
 go:
 	go build -o ybFeed *.go
 
+ui-run: ui run
+
 run:
 	go run *.go
 
