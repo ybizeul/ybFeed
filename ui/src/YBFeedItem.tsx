@@ -25,22 +25,23 @@ export default function YBFeedItem(props:FeedItemProps) {
     const copyItem = (item: string) => {
         if (props.item.type === 0) {
             navigator.clipboard.writeText(textValue)
+            message.info("Copied to clipboard!")
         }
         else if (props.item.type === 1) {
-            fetch("/api/feed/"+props.feed+"/"+props.item.name,{
-                credentials: "include"
-                })
-            .then( (r) => {
-                r.blob()
-                .then((blob) => {
-                    const data = [new ClipboardItem({[blob.type]: blob})]
-                    navigator.clipboard.write(data)
-                })
+            const fetchPromise = async () => {
+                const r = await fetch("/api/feed/"+props.feed+"/"+props.item.name,{
+                                    credentials: "include"
+                                })
+                return await r.blob()
+            }
+            navigator.clipboard.write([new ClipboardItem({'image/png': fetchPromise()})])
+            .then(() => {
+                message.info("Copied to clipboard!")
             })
-            
-            //navigator.clipboard.write(this.)
+            .catch(() => {
+                message.error("Unable to copy")
+            })
         }
-        message.info("Copied to clipboard!")
     }
 
     useEffect(() => {
