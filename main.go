@@ -24,6 +24,7 @@ func main() {
 	r.HandleFunc("/api/", apiHandleFunc)
 	r.HandleFunc("/", rootHandlerFunc)
 
+	log.Infof("ybFeed v%s started", version)
 	err := http.ListenAndServe(":8080", r)
 	if err != nil {
 		log.Fatal(err)
