@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
-import { Image } from 'antd'
+import { Image,Space } from 'antd'
+import { message } from 'antd'
 
 import {
     FileImageOutlined,
     FileTextOutlined,
     DeleteOutlined,
+    CopyOutlined
   } from '@ant-design/icons';
 
 
@@ -12,10 +14,34 @@ interface FeedItemProps {
     item: { [key: string]: any },
     feed: string,
     onDelete?: (item: string) => void
+    onCopy?: (item: string) => void
 }
 
 export default function YBFeedItem(props:FeedItemProps) {
     const [textValue,setTextValue] = useState("")
+    //
+    // Copy item to pasteboard
+    //
+    const copyItem = (item: string) => {
+        if (props.item.type === 0) {
+            navigator.clipboard.writeText(textValue)
+        }
+        else if (props.item.type === 1) {
+            fetch("/api/feed/"+props.feed+"/"+props.item.name,{
+                credentials: "include"
+                })
+            .then( (r) => {
+                r.blob()
+                .then((blob) => {
+                    const data = [new ClipboardItem({[blob.type]: blob})]
+                    navigator.clipboard.write(data)
+                })
+            })
+            
+            //navigator.clipboard.write(this.)
+        }
+        message.info("Copied to clipboard!")
+    }
 
     useEffect(() => {
         if (props.item.type === 0) {
@@ -30,9 +56,10 @@ export default function YBFeedItem(props:FeedItemProps) {
             })
         }
     })
+
     return(
         <div className='item'>
-            <YBHeading item={props.item} feed={props.feed} onDelete={props.onDelete}/>
+            <YBHeading item={props.item} feed={props.feed} onDelete={props.onDelete} onCopy={copyItem}/>
 
             {(props.item.type === 0)?
             <div className="itemText">
@@ -57,19 +84,14 @@ export default function YBFeedItem(props:FeedItemProps) {
 }
 function YBHeading(props: FeedItemProps) {
     const deleteItem = () => {
-        fetch("/api/feed/"+props.feed+"/"+props.item.name,{
-            method: "DELETE",
-            credentials: "include"
-            })
-        .then(r => {
-            r.text()
-            .then(t => {
-                    if (props.onDelete !== null) {
-                        props.onDelete!(props.item.name)
-                    }
-                }
-            )
-        })
+        if (props.onDelete !== undefined) {
+            props.onDelete(props.item.name)
+        }
+    }
+    const copyItem = () => {
+        if (props.onCopy !== undefined) {
+            props.onCopy(props.item.name)
+        }
     }
     return (
         <div className='heading'>
@@ -80,7 +102,10 @@ function YBHeading(props: FeedItemProps) {
         <FileImageOutlined />
         :""}
         &nbsp;{props.item.name}
-        <DeleteOutlined style={{float: 'right', fontSize: '14px'}} onClick={deleteItem} />
+        <Space style={{float:'right'}}>
+            <CopyOutlined style={{fontSize: '14px'}} onClick={copyItem} />
+            <DeleteOutlined style={{fontSize: '14px'}} onClick={deleteItem} />
+        </Space>
         </div>
     )
 }
