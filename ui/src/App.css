@@ -70,3 +70,11 @@ DIV.center {
 .PINModal {
   text-align: center;
 }
+
+.itemText {
+  overflow:hidden;
+}
+
+.itemText pre {
+  padding-bottom: 1em;
+}

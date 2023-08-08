@@ -35,7 +35,9 @@ export default function YBFeedItem(props:FeedItemProps) {
             <YBHeading item={props.item} feed={props.feed} onDelete={props.onDelete}/>
 
             {(props.item.type === 0)?
-            <pre>{textValue}</pre>
+            <div className="itemText">
+                <pre style={{overflowY:"scroll"}}>{textValue}</pre>
+            </div>
             :""
             }
 
