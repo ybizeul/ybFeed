@@ -24,7 +24,8 @@ const router = createBrowserRouter([
 ]);
 
 const App: React.FC = () => (
-  <div className="App">
+  <div className="App" style={{
+    height:'100%'}}>
     <Layout>
         <Content>
         <Row>
