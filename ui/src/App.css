@@ -78,3 +78,7 @@ DIV.center {
 .itemText pre {
   padding-bottom: 1em;
 }
+
+.itemImg {
+  max-width: 100%;
+}

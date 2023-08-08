@@ -73,7 +73,6 @@ export default function YBFeedItem(props:FeedItemProps) {
                 <div className='center'>
                 <Image
                     className="itemImg"
-                    width={600}
                     src={"/api/feed/"+props.feed+"/"+props.item.name}
                     preview={false}
                 />
