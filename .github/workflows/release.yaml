@@ -26,11 +26,10 @@ jobs:
       working-directory: ./ui
     - run: npm run build
       working-directory: ./ui
-    - uses: wangyoucao577/go-release-action@v1.35
+    - uses: goreleaser/goreleaser-action@v4
       with:
-        github_token: ${{ secrets.PACKAGE_TOKEN }}
-        goos: ${{ matrix.goos }}
-        goarch: ${{ matrix.goarch }}
-        retry: 10
-        overwrite: true
-        extra_files: LICENSE README.md
+          distribution: goreleaser
+          version: latest
+          args: release --clean
+      env:
+        GITHUB_TOKEN: ${{ secrets.PACKAGE_TOKEN }}

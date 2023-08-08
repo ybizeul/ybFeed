@@ -28,6 +28,9 @@ archives:
     format_overrides:
     - goos: windows
       format: zip
+    files:
+      - LICENSE
+      - README.md
 checksum:
   name_template: 'checksums.txt'
 snapshot:
