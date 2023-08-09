@@ -63,27 +63,24 @@ export default function YBFeedItem(props:FeedItemProps) {
             <YBHeading item={props.item} feed={props.feed} onDelete={props.onDelete} onCopy={copyItem}/>
 
             {(props.item.type === 0)?
-            <div className="itemText">
-                <Button icon={<MdContentCopy />} style={{float: 'right'}} onClick={(e) => {copyItem(props.item.name)}} />
-                <pre style={{overflowY:"scroll"}}>{textValue}</pre>
+            <div className="itemContainer">
+                <div className="itemText">
+                    <pre style={{overflowY:"scroll"}}>{textValue}</pre>
+                    <Button icon={<MdContentCopy />} onClick={(e) => {copyItem(props.item.name)}} />
+                </div>
             </div>
             :""
             }
 
             {(props.item.type === 1)?
-                <div className="itemContainer">
-                    <div className="itemImageWrapper">
-                        <Image
-                        className="itemImage"
-                        src={"/api/feed/"+props.feed+"/"+props.item.name}
-                        preview={false}
-                        />
-                    </div>
-                    <div className="buttonWrapper">
-                        <Button icon={<MdContentCopy />} onClick={(e) => {copyItem(props.item.name)}} />
-                    </div>
-                </div>
-
+             <div className="itemContainer">
+                <Image
+                className="itemImage"
+                src={"/api/feed/"+props.feed+"/"+props.item.name}
+                preview={false}
+                />
+                <Button icon={<MdContentCopy />} onClick={(e) => {copyItem(props.item.name)}} />
+            </div>
                 :""
                 }
         </div>

@@ -91,17 +91,8 @@ DIV.App>DIV.ant-layout {
   position: relative;
 }
 
-.buttonWrapper {
+.itemContainer button {
   position: absolute;
-  top: 0;
-  right: 0;
-}
-
-.itemImageWrapper {
-  position: relative;
-}
-
-.itemImage {
-  max-width: 100%;
-  height: auto;
+  top: 0.5rem;
+  right: 0.5rem;
 }
