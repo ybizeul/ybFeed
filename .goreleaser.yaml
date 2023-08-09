@@ -38,9 +38,9 @@ snapshot:
 changelog:
   sort: asc
   filters:
-    exclude:
-      - '^docs:'
-      - '^test:'
+    include:
+      - '^new:'
+      - '^fix:'
 
 # The lines beneath this are called `modelines`. See `:help modeline`
 # Feel free to remove those if you don't want/use them.
