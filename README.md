@@ -46,7 +46,6 @@ authentication would be needed to get access once the cookie is expired
 - Security could probably be improved, tokens and PINs are stored in clear on
 the filesystem
 - Logging is pretty much inexistant
-- You cannot currently customize the default port 8080
 - No rate control or capacity limits, quite exposed to flooding as it is
 
 ### Building
@@ -79,8 +78,10 @@ go build -o ybFeed *.go
 ```
 
 ### Environment variables
-`YBF_DATADIR` points to an alternative direcotry to store data, default is
-`./data/` in current directory.
+| Variable name | Description |
+|---------------|-------------|
+| `YBF_DATA_DIR` | points to an alternative direcotry to store data, default is `./data/` in current directory. |
+| `YBF_HTTP_PORT` | TCP port to run the server, default is `8080`. |
 
 ### Docker
 
