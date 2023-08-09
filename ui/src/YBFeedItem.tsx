@@ -74,12 +74,14 @@ export default function YBFeedItem(props:FeedItemProps) {
 
             {(props.item.type === 1)?
              <div className="itemContainer">
+                <div className="itemImg">
                 <Image
                 className="itemImage"
                 src={"/api/feed/"+props.feed+"/"+props.item.name}
                 preview={false}
                 />
                 <Button icon={<MdContentCopy />} onClick={(e) => {copyItem(props.item.name)}} />
+                </div>
             </div>
                 :""
                 }

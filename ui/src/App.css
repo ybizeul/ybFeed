@@ -81,6 +81,7 @@ DIV.center {
 
 .itemImg {
   max-width: 100%;
+  text-align: center;
 }
 
 DIV.App>DIV.ant-layout {
