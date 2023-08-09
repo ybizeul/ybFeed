@@ -29,11 +29,11 @@ const App: React.FC = () => (
     <Layout>
         <Content>
         <Row>
-          <Col span={6}/>
-          <Col span={12}>
+          <Col xs={1} lg={6}/>
+          <Col xs={22} lg={12}>
             <RouterProvider router={router} />
           </Col>
-          <Col span={6}/>
+          <Col xs={1} lg={6}/>
         </Row>
       </Content>
     </Layout>
