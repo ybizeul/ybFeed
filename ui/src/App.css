@@ -86,3 +86,22 @@ DIV.center {
 DIV.App>DIV.ant-layout {
   height: 100%;
 }
+
+.itemContainer {
+  position: relative;
+}
+
+.buttonWrapper {
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+
+.itemImageWrapper {
+  position: relative;
+}
+
+.itemImage {
+  max-width: 100%;
+  height: auto;
+}
