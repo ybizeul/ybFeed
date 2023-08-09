@@ -39,8 +39,8 @@ Here are some I already identified :
 
 - ybFeed relies on a cookie to authenticate the session, if the cookie is lost
 there is no easy way to retrieve the feed
-- Most modern browser won't honor loog cookie lifetime, so a JWT based session
-would be much better, stay tuned
+- Most modern browser won't honor loog cookie lifetime, some alternative
+authentication would be needed to get access once the cookie is expired
 - Mobile usage is pretty limited as you cannot paste data currently
 - Security could probably be improved, tokens and PINs are stored in clear on
 the filesystem
