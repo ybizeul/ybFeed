@@ -38,7 +38,8 @@ This is just a side project I'm working on, so there is probably lots of issues
 Here are some I already identified :
 
 - ybFeed relies on a cookie to authenticate the session, if the cookie is lost
-there is no easy way to retrieve the feed
+there is no easy way to retrieve the feed (you can get it from the `secret` file
+in the feed directory)
 - Most modern browser won't honor loog cookie lifetime, some alternative
 authentication would be needed to get access once the cookie is expired
 - Mobile usage is pretty limited as you cannot paste data currently
@@ -46,7 +47,7 @@ authentication would be needed to get access once the cookie is expired
 the filesystem
 - Logging is pretty much inexistant
 - You cannot currently customize the default port 8080
-- No rate control or capacity limits
+- No rate control or capacity limits, quite exposed to flooding as it is
 
 ### Building
 
