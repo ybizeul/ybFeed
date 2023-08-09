@@ -75,19 +75,6 @@ export default function Feed() {
     }
 
     //
-    // Delete an item in the feed
-    //
-    const deleteItem = (item: string) => {
-        fetch("/api/feed/"+params.feed+"/"+item,{
-            method: "DELETE",
-            credentials: "include"
-          })
-        .then(r => {
-            update()
-        })
-    }
-
-    //
     // Update feed is run every 2s or o, some events
     //
     function update() {
@@ -180,6 +167,36 @@ export default function Feed() {
             update()
           })
       }
+    
+
+    //
+    // Delete an item in the feed
+    //
+    
+    const [deleteModalOpen,setDeleteModalOpen] = useState(false)
+    const [deleteFileName, setDeleteFileName] = useState<string|undefined>(undefined)
+    const deleteItem = (item: string) => {
+        setDeleteFileName(item)
+        setDeleteModalOpen(true)
+    }
+    const doDelete = () => {
+        fetch("/api/feed/"+params.feed+"/"+deleteFileName,{
+            method: "DELETE",
+            credentials: "include"
+          })
+        .then(r => {
+            update()
+        })
+        setDeleteModalOpen(false)
+    }
+
+    const handleDeleteModalOK = () => {
+        doDelete()
+    } 
+    
+    const handleDeleteModalCancel = () => {
+        setDeleteModalOpen(false)
+    } 
     return (
         <>
         {goTo?
@@ -214,7 +231,9 @@ export default function Feed() {
                 </Form.Item>
             </Form>
         </Modal>
-
+        <Modal title="Delete" className="DeleteModal" open={deleteModalOpen} onOk={handleDeleteModalOK} onCancel={handleDeleteModalCancel} destroyOnClose={true}>
+            <p>Do you really want to delete file "{deleteFileName}"?</p>
+        </Modal>
         <div className="pasteCard" onPaste={handleOnPaste}>
             <YBPasteCard empty={feedItems.length === 0}/>
         </div>
