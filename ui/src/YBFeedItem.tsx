@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
-import { Image,Space } from 'antd'
+import { Image,Space, Button } from 'antd'
 import { message } from 'antd'
+import { MdContentCopy } from "react-icons/md";
 
 import {
     FileImageOutlined,
     FileTextOutlined,
     DeleteOutlined,
-    CopyOutlined
   } from '@ant-design/icons';
 
 
@@ -64,18 +64,21 @@ export default function YBFeedItem(props:FeedItemProps) {
 
             {(props.item.type === 0)?
             <div className="itemText">
+                <Button icon={<MdContentCopy />} style={{float: 'right'}} onClick={(e) => {copyItem(props.item.name)}} />
                 <pre style={{overflowY:"scroll"}}>{textValue}</pre>
             </div>
             :""
             }
 
             {(props.item.type === 1)?
-                <div className='center'>
+            <div className="itemImg">
+                <Button icon={<MdContentCopy />} style={{float: 'right'}} onClick={(e) => {copyItem(props.item.name)}} />
                 <Image
                     className="itemImg"
                     src={"/api/feed/"+props.feed+"/"+props.item.name}
                     preview={false}
                 />
+                
                 </div>
                 :""
                 }
@@ -88,11 +91,6 @@ function YBHeading(props: FeedItemProps) {
             props.onDelete(props.item.name)
         }
     }
-    const copyItem = () => {
-        if (props.onCopy !== undefined) {
-            props.onCopy(props.item.name)
-        }
-    }
     return (
         <div className='heading'>
         {(props.item.type === 0)?
@@ -103,8 +101,7 @@ function YBHeading(props: FeedItemProps) {
         :""}
         &nbsp;{props.item.name}
         <Space style={{float:'right'}}>
-            <CopyOutlined style={{fontSize: '14px'}} onClick={copyItem} />
-            <DeleteOutlined style={{fontSize: '14px'}} onClick={deleteItem} />
+            <DeleteOutlined style={{fontSize: '14px', color: 'red'}} onClick={deleteItem} />
         </Space>
         </div>
     )
