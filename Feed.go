@@ -197,8 +197,8 @@ func (feed *Feed) AddItem(contentType string, f io.ReadCloser) error {
 	}
 
 	filenameTemplate := map[string]string{
-		"image/png":  "Paste Image",
-		"image/jpeg": "Paste Image",
+		"image/png":  "Pasted Image",
+		"image/jpeg": "Pasted Image",
 		"text/plain": "Pasted Text",
 	}
 
