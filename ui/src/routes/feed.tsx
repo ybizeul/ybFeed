@@ -5,7 +5,7 @@ import { Navigate } from 'react-router';
 
 import queryString from 'query-string';
 
-import { Button, Form, Input, Modal } from 'antd';
+import { Button, Form, Input, Modal, Row, Col } from 'antd';
 import { message } from 'antd';
 import type { MenuProps } from 'antd';
 import { Dropdown, Space } from 'antd';
@@ -218,17 +218,24 @@ export default function Feed() {
         {authenticated===true?
         <>
         <Modal title="Set Temporary PIN" className="PINModal" open={pinModalOpen} footer={null} onCancel={handlePinModalCancel} destroyOnClose={true}>
-            <p>Please choose a PIN, it wille expire after 2 minutes:</p>
+            <div className="text-center">
+                Please choose a PIN, it wille expire after 2 minutes:
+            </div>
             <Form
                 onFinish={setPIN}
-            >
-                <Form.Item
-                    name="PIN"
-                    rules={[{ required: true, type: 'string', len: 4, pattern: RegExp("[0-9]{4}"), validateTrigger:"onBlur" }]}
-                    validateTrigger="onBlur"
                 >
-                <Input size="large" width={4} type="password" maxLength={4} placeholder="1234" prefix={<NumberOutlined />} />
-                </Form.Item>
+                <Row justify='center'>
+                    <Col>
+                        <Form.Item
+                            name="PIN"
+                            rules={[{ required: true, type: 'string', len: 4, pattern: RegExp("[0-9]{4}"), validateTrigger:"onBlur" }]}
+                            validateTrigger="onBlur"
+                            className='pin-field'
+                        >
+                        <Input size="large" width={4} type="password" maxLength={4} placeholder="1234" prefix={<NumberOutlined />} />
+                        </Form.Item>
+                    </Col>
+                </Row>
             </Form>
         </Modal>
         <Modal title="Delete" className="DeleteModal" open={deleteModalOpen} onOk={handleDeleteModalOK} onCancel={handleDeleteModalCancel} destroyOnClose={true}>
@@ -246,19 +253,37 @@ export default function Feed() {
 
         {authenticated===false?
         <>
-        <p>It doesn't look like you are authorized to view this feed.</p>
-        <p>Would you like to authenticate with a PIN?</p>
-            <Form
-                onFinish={sendPIN}
-            >
-                <Form.Item
-                    name="PIN"
-                    rules={[{ required: true, type: 'string', len: 4, pattern: RegExp("[0-9]{4}"), validateTrigger:"onBlur" }]}
-                    validateTrigger="onBlur"
-                >
-                <Input size="large" width={4} type="password" maxLength={4} placeholder="1234" prefix={<NumberOutlined />} />
-                </Form.Item>
-            </Form>
+        <Row justify='center'>
+            <Col>
+                <div className="text-center">
+                    <p>It doesn't look like you are authorized to view this feed.</p>
+                    <p>Would you like to authenticate with a PIN?</p>
+                </div>
+            </Col>
+        </Row>
+        <Row justify='center'>
+            <Col>
+                <Form
+                        onFinish={sendPIN}
+                        className='form-container'
+                        >
+                        <Form.Item
+                            name="PIN"
+                            rules={[{ required: true, type: 'string', len: 4, pattern: RegExp("[0-9]{4}"), validateTrigger:"onBlur" }]}
+                            validateTrigger="onBlur"
+                            >
+                        <Input 
+                            className="pin-field"
+                            size="large" 
+                            width={3} 
+                            type="password" 
+                            maxLength={4} 
+                            placeholder="1234" 
+                            prefix={<NumberOutlined />} />
+                        </Form.Item>
+                </Form>
+            </Col>
+        </Row>
         </>
         :""
         }

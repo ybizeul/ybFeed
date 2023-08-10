@@ -40,6 +40,12 @@
 .form-container {
   display: flex;
   flex-direction: column;
+  align-items:normal;
+}
+
+.form-container-center {
+  display: flex;
+  flex-direction: column;
   align-items: center;
 }
 
@@ -48,6 +54,9 @@
   margin-bottom: 10px;
 }
 
+.pin-field {
+  width: 7em;
+}
 DIV.item {
   margin-top: 3em;
   margin-bottom: 3em;
@@ -59,7 +68,7 @@ DIV.heading {
   padding-bottom: 0.5em;
 }
 
-DIV.center {
+DIV.center, .text-center {
   text-align: center;
 }
 
