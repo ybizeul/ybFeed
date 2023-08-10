@@ -226,14 +226,18 @@ export default function Feed() {
                 >
                 <Row justify='center'>
                     <Col>
-                        <Form.Item
-                            name="PIN"
-                            rules={[{ required: true, type: 'string', len: 4, pattern: RegExp("[0-9]{4}"), validateTrigger:"onBlur" }]}
-                            validateTrigger="onBlur"
-                            className='pin-field'
-                        >
-                        <Input size="large" width={4} type="password" maxLength={4} placeholder="1234" prefix={<NumberOutlined />} />
-                        </Form.Item>
+                        <Form
+                            action="/"
+                            >
+                            <Form.Item
+                                name="PIN"
+                                rules={[{ required: true, type: 'string', len: 4, pattern: RegExp("[0-9]{4}"), validateTrigger:"onBlur" }]}
+                                validateTrigger="onBlur"
+                                className='pin-field'
+                            >
+                            <Input size="large" width={4} type="password" maxLength={4} placeholder="1234" prefix={<NumberOutlined />} />
+                            </Form.Item>
+                        </Form>
                     </Col>
                 </Row>
             </Form>
