@@ -9,6 +9,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+    - run: git fetch --force --tags
     - name: Use Node.js 20.x
       uses: actions/setup-node@v3
       with:
@@ -17,6 +20,9 @@ jobs:
       working-directory: ./ui
     - run: npm run build
       working-directory: ./ui
+    - uses: actions/setup-go@v4
+      with:
+        go-version: stable
     - uses: goreleaser/goreleaser-action@v4
       with:
           distribution: goreleaser
