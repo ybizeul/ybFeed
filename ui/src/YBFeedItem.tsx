@@ -17,30 +17,49 @@ interface FeedItemProps {
     onCopy?: (item: string) => void
 }
 
+
 export default function YBFeedItem(props:FeedItemProps) {
     const [textValue,setTextValue] = useState("")
     //
     // Copy item to pasteboard
     //
-    const copyItem = (item: string) => {
+    const copyItem = async (item: string) => {
         if (props.item.type === 0) {
             navigator.clipboard.writeText(textValue)
             message.info("Copied to clipboard!")
         }
         else if (props.item.type === 1) {
-            const fetchPromise = async () => {
-                const r = await fetch("/api/feed/"+props.feed+"/"+props.item.name,{
-                                    credentials: "include"
-                                })
-                return await r.blob()
-            }
-            navigator.clipboard.write([new ClipboardItem({'image/png': fetchPromise()})])
+            const img = document.createElement('img')
+            const c = document.createElement('canvas')
+            const ctx = c.getContext('2d')
+
+            const imageDataPromise = new Promise<Blob>(resolve => {
+                const b = (blob: Blob) => {
+                    resolve(blob)
+                }
+                const imageLoaded = () => {
+                    c.width = img.naturalWidth
+                    c.height = img.naturalHeight
+                    ctx?.drawImage(img,0,0)
+                    console.log("Image is " + c.width + "x" + c.height)
+                    c.toBlob(blob=>{
+                        b(blob!)
+                    },'image/png')
+                }
+                img.onload = imageLoaded
+
+            })
+            img.src = "/api/feed/"+props.feed+"/"+props.item.name
+
+            let mime = 'image/png'
+            navigator.clipboard.write([new ClipboardItem({[mime]:imageDataPromise})])
             .then(() => {
                 message.info("Copied to clipboard!")
             })
-            .catch(() => {
+            .catch((e) => {
+                console.log(e)
                 message.error("Unable to copy")
-            })
+            })            
         }
     }
 
