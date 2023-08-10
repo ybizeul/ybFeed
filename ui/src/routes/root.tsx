@@ -40,6 +40,7 @@ export default function Root() {
                     <Input
                         className="input-field"
                         placeholder="Feed name"
+                        autoCapitalize='off'
                         onChange={(e) => setFeed(e.currentTarget.value.toLowerCase())}
                     />
                 </Form.Item>
