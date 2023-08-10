@@ -221,14 +221,13 @@ export default function Feed() {
             <div className="text-center">
                 Please choose a PIN, it wille expire after 2 minutes:
             </div>
-            <Form
+            <Row justify='center'>
+                    <Col>
+                                <Form
+                action="/"
                 onFinish={setPIN}
                 >
-                <Row justify='center'>
-                    <Col>
-                        <Form
-                            action="/"
-                            >
+
                             <Form.Item
                                 name="PIN"
                                 rules={[{ required: true, type: 'string', len: 4, pattern: RegExp("[0-9]{4}"), validateTrigger:"onBlur" }]}
@@ -240,7 +239,7 @@ export default function Feed() {
                         </Form>
                     </Col>
                 </Row>
-            </Form>
+
         </Modal>
         <Modal title="Delete" className="DeleteModal" open={deleteModalOpen} onOk={handleDeleteModalOK} onCancel={handleDeleteModalCancel} destroyOnClose={true}>
             <p>Do you really want to delete file "{deleteFileName}"?</p>
