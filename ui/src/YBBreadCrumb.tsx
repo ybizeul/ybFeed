@@ -1,4 +1,5 @@
 import { Breadcrumb } from 'antd';
+import { Link } from 'react-router-dom'
 
 interface PathElement {
   title: string|JSX.Element
@@ -8,7 +9,7 @@ export default function YBBreadCrumb() {
   let p = window.location.pathname.split("/")
   let items: PathElement[] = [
     {
-      title: <a href="/">Home</a>,
+      title: <Link to="/">Home</Link>,
     }
   ]
 
