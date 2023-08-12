@@ -31,6 +31,7 @@ export default function Feed() {
     //
     // Pasting Data
     //
+    
     const handleOnPaste = (event: React.ClipboardEvent) => {
         const items = event.clipboardData.items
         var data, type
@@ -134,7 +135,7 @@ export default function Feed() {
     }
     const items: MenuProps['items'] = [
         {
-          label: 'Copy Link',
+          label: 'Copy Permalink',
           key: '1',
           icon: <LinkOutlined />,
         },
