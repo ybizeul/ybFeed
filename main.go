@@ -6,18 +6,21 @@ import (
 	"net/http"
 	"os"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
+	"golang.org/x/exp/slog"
 )
 
 //go:embed ui/build
 var EMBED_UI embed.FS
 
 var HTTP_PORT int
-
+var DEBUG bool
 var dataDir string
 
+var logLevel slog.LevelVar
+
 func main() {
+	logLevel.Set(slog.LevelInfo)
 	app := &cli.App{
 		Name:    "ybFeed",
 		Version: version,
@@ -31,6 +34,13 @@ func main() {
 				Usage:       "TCP Port to listen",
 				Destination: &HTTP_PORT,
 			},
+			&cli.BoolFlag{
+				Name:        "debug",
+				Value:       false,
+				EnvVars:     []string{"DEBUG"},
+				Usage:       "Debug Logging",
+				Destination: &DEBUG,
+			},
 			&cli.StringFlag{
 				Name:        "dir",
 				Aliases:     []string{"d"},
@@ -41,13 +51,20 @@ func main() {
 			},
 		},
 		Action: func(cCtx *cli.Context) error {
+			logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: &logLevel}))
+			slog.SetDefault(logger)
+			if DEBUG {
+				logLevel.Set(slog.LevelDebug)
+			}
+			slog.Info("Debugging", "status", slog.BoolValue(DEBUG))
 			run()
 			return nil
 		},
 	}
 
 	if err := app.Run(os.Args); err != nil {
-		log.Fatal(err)
+		slog.Error(err.Error())
+		os.Exit(1)
 	}
 }
 func run() {
@@ -60,19 +77,17 @@ func run() {
 	r.HandleFunc("/api/", apiHandleFunc)
 	r.HandleFunc("/", rootHandlerFunc)
 
-	log.Infof("ybFeed v%s starting serving from %s on port %d", version, dataDir, HTTP_PORT)
+	slog.Info("ybFeed starting", "version", slog.StringValue(version), "data_dir", slog.StringValue(dataDir), "port", slog.IntValue(HTTP_PORT))
 	err := http.ListenAndServe(fmt.Sprintf(":%d", HTTP_PORT), r)
 	if err != nil {
-		log.Fatal(err)
+		slog.Error(err.Error())
+		os.Exit(1)
 	}
 }
 
 func initialize() {
-	if os.Getenv("DEBUG") != "" {
-		log.SetLevel(log.DebugLevel)
-	}
-
 	if _, err := os.Stat(dataDir); os.IsNotExist(err) {
+		slog.Debug("Creating data directory", "path", slog.StringValue(dataDir))
 		err = os.Mkdir(dataDir, 0700)
 	}
 }

@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"golang.org/x/exp/slog"
 )
 
 var handler = http.FileServer(http.FS(getUiFs()))
@@ -28,7 +30,7 @@ func rootHandlerFunc(w http.ResponseWriter, request *http.Request) {
 	matches, err := fs.Glob(ui, p)
 
 	if err != nil {
-		println(err.Error())
+		slog.Error(err.Error())
 	}
 
 	if len(matches) == 1 {
@@ -42,8 +44,7 @@ func rootHandlerFunc(w http.ResponseWriter, request *http.Request) {
 
 	content, err := fs.ReadFile(ui, "index.html")
 	if err != nil {
-		println("Error")
-		println(err.Error())
+		slog.Error(err.Error())
 	}
 	w.Write(content)
 }
