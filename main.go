@@ -56,14 +56,14 @@ func main() {
 			if DEBUG {
 				logLevel.Set(slog.LevelDebug)
 			}
-			slog.Info("Debugging", "status", slog.BoolValue(DEBUG))
+			slog.Info("Debugging", slog.Bool("status", DEBUG))
 			run()
 			return nil
 		},
 	}
 
 	if err := app.Run(os.Args); err != nil {
-		slog.Error(err.Error())
+		slog.Error("Unable to run app with arguments", slog.String("error", err.Error()), slog.Any("args", os.Args))
 		os.Exit(1)
 	}
 }
@@ -77,17 +77,20 @@ func run() {
 	r.HandleFunc("/api/", apiHandleFunc)
 	r.HandleFunc("/", rootHandlerFunc)
 
-	slog.Info("ybFeed starting", "version", slog.StringValue(version), "data_dir", slog.StringValue(dataDir), "port", slog.IntValue(HTTP_PORT))
+	slog.Info("ybFeed starting", slog.String("version", version), slog.String("data_dir", dataDir), slog.Int("port", HTTP_PORT))
 	err := http.ListenAndServe(fmt.Sprintf(":%d", HTTP_PORT), r)
 	if err != nil {
-		slog.Error(err.Error())
+		slog.Error("Unable to start HTTP server", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
 }
 
 func initialize() {
 	if _, err := os.Stat(dataDir); os.IsNotExist(err) {
-		slog.Debug("Creating data directory", "path", slog.StringValue(dataDir))
-		err = os.Mkdir(dataDir, 0700)
+		slog.Debug("Creating data directory", slog.String("path", dataDir))
+		if err = os.Mkdir(dataDir, 0700); err != nil {
+			slog.Error("Unable to create data directory", slog.String("path", dataDir), slog.String("error", err.Error()))
+			os.Exit(1)
+		}
 	}
 }

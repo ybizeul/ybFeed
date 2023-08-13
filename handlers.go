@@ -15,8 +15,9 @@ import (
 
 var handler = http.FileServer(http.FS(getUiFs()))
 
-func rootHandlerFunc(w http.ResponseWriter, request *http.Request) {
-	p := request.URL.Path
+func rootHandlerFunc(w http.ResponseWriter, r *http.Request) {
+	slog.Default().WithGroup("http").Debug("Root request", slog.Any("request", r))
+	p := r.URL.Path
 
 	ui := getUiFs()
 
@@ -30,11 +31,11 @@ func rootHandlerFunc(w http.ResponseWriter, request *http.Request) {
 	matches, err := fs.Glob(ui, p)
 
 	if err != nil {
-		slog.Error(err.Error())
+		slog.Error("Unable to get web ui fs", slog.String("error", err.Error()))
 	}
 
 	if len(matches) == 1 {
-		handler.ServeHTTP(w, request)
+		handler.ServeHTTP(w, r)
 		return
 	}
 
@@ -44,7 +45,7 @@ func rootHandlerFunc(w http.ResponseWriter, request *http.Request) {
 
 	content, err := fs.ReadFile(ui, "index.html")
 	if err != nil {
-		slog.Error(err.Error())
+		slog.Error("Unable to read index.html from web ui", slog.String("error", err.Error()))
 	}
 	w.Write(content)
 }
@@ -53,26 +54,28 @@ func rootHandlerFunc(w http.ResponseWriter, request *http.Request) {
 // Handle requests to /api
 //
 
-func apiHandleFunc(w http.ResponseWriter, request *http.Request) {
-	split := strings.Split(request.URL.Path, "/")
+func apiHandleFunc(w http.ResponseWriter, r *http.Request) {
+	slog.Default().WithGroup("http").Debug("API request", slog.Any("request", r))
+	split := strings.Split(r.URL.Path, "/")
 	if len(split) == 4 {
-		if request.Method == "GET" {
-			feedHandlerFunc(w, request)
-		} else if request.Method == "POST" {
-			feedPostHandlerFunc(w, request)
-		} else if request.Method == "PATCH" {
-			feedPatchHandlerFunc(w, request)
+		if r.Method == "GET" {
+			feedHandlerFunc(w, r)
+		} else if r.Method == "POST" {
+			feedPostHandlerFunc(w, r)
+		} else if r.Method == "PATCH" {
+			feedPatchHandlerFunc(w, r)
 		}
 	} else if len(split) == 5 {
-		if request.Method == "GET" {
-			feedItemHandlerFunc(w, request)
-		} else if request.Method == "DELETE" {
-			feedItemDeleteHandlerFunc(w, request)
+		if r.Method == "GET" {
+			feedItemHandlerFunc(w, r)
+		} else if r.Method == "DELETE" {
+			feedItemDeleteHandlerFunc(w, r)
 		}
 	}
 }
 
 func feedHandlerFunc(w http.ResponseWriter, r *http.Request) {
+	slog.Default().WithGroup("http").Debug("Feed API request", slog.Any("request", r))
 
 	secret, fromURL := getSecret(r)
 
@@ -117,6 +120,7 @@ func feedHandlerFunc(w http.ResponseWriter, r *http.Request) {
 }
 
 func feedPatchHandlerFunc(w http.ResponseWriter, r *http.Request) {
+	slog.Default().WithGroup("http").Debug("Feed API Set PIN request", slog.Any("request", r))
 	secret, _ := getSecret(r)
 
 	feedName := strings.Split(r.URL.Path, "/")[3]
@@ -139,6 +143,8 @@ func feedPatchHandlerFunc(w http.ResponseWriter, r *http.Request) {
 }
 
 func feedItemHandlerFunc(w http.ResponseWriter, r *http.Request) {
+	slog.Default().WithGroup("http").Debug("Item API GET request", slog.Any("request", r))
+
 	secret, _ := getSecret(r)
 
 	feedName := strings.Split(r.URL.Path, "/")[3]
@@ -174,6 +180,8 @@ func feedItemHandlerFunc(w http.ResponseWriter, r *http.Request) {
 }
 
 func feedPostHandlerFunc(w http.ResponseWriter, r *http.Request) {
+	slog.Default().WithGroup("http").Debug("Item API POST request", slog.Any("request", r))
+
 	secret, _ := getSecret(r)
 
 	feedName := strings.Split(r.URL.Path, "/")[3]
@@ -201,6 +209,8 @@ func feedPostHandlerFunc(w http.ResponseWriter, r *http.Request) {
 }
 
 func feedItemDeleteHandlerFunc(w http.ResponseWriter, r *http.Request) {
+	slog.Default().WithGroup("http").Debug("Item API DELETE request", slog.Any("request", r))
+
 	secret, _ := getSecret(r)
 
 	feedName := strings.Split(r.URL.Path, "/")[3]

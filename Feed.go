@@ -13,6 +13,7 @@ import (
 
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/exp/slog"
 )
 
 type FeedError struct {
@@ -38,6 +39,12 @@ type Feed struct {
 	Items  []FeedItem `json:"items"`
 
 	path string
+}
+type FeedItem struct {
+	Name string       `json:"name"`
+	Date time.Time    `json:"date"`
+	Type FeedItemType `json:"type"`
+	Feed *Feed        `json:"-"`
 }
 
 func NewFeed(feedName string) (*Feed, error) {
@@ -190,6 +197,7 @@ func (feed *Feed) GetItem(item string) ([]byte, error) {
 	return content, nil
 }
 func (feed *Feed) AddItem(contentType string, f io.ReadCloser) error {
+	slog.Debug("Adding Item", slog.String("feed", feed.Name), slog.String("content-type", contentType))
 	fileExtensions := map[string]string{
 		"image/png":  "png",
 		"image/jpeg": "jpg",
@@ -244,11 +252,14 @@ func (feed *Feed) AddItem(contentType string, f io.ReadCloser) error {
 			Message: "Unable to write file",
 		}
 	}
+
+	slog.Info("Added Item", slog.String("name", filename+"."+ext), slog.String("feed", feed.Name), slog.String("content-type", contentType))
+
 	return nil
 }
 
 func (feed *Feed) RemoveItem(item string) error {
-
+	slog.Debug("Remove Item", slog.String("name", item), slog.String("feed", feed.Name))
 	itemPath := path.Join(feed.path, item)
 
 	err := os.Remove(itemPath)
@@ -258,6 +269,7 @@ func (feed *Feed) RemoveItem(item string) error {
 			Message: "Unable to delete file",
 		}
 	}
+	slog.Info("Removed Item", slog.String("name", item), slog.String("feed", feed.Name))
 	return nil
 }
 func (feed *Feed) SetPIN(pin string) error {
@@ -272,11 +284,4 @@ func (feed *Feed) SetPIN(pin string) error {
 		}
 	}
 	return nil
-}
-
-type FeedItem struct {
-	Name string       `json:"name"`
-	Date time.Time    `json:"date"`
-	Type FeedItemType `json:"type"`
-	Feed *Feed        `json:"-"`
 }

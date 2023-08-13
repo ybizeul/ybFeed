@@ -18,12 +18,12 @@ import {
 
 import YBBreadCrumb from '../YBBreadCrumb'
 import YBPasteCard from '../YBPasteCard'
-import YBFeedItem from '../YBFeedItem'
+import {YBFeedItem,FeedItem} from '../YBFeedItem'
 
 export default function Feed() {
     const params=useParams()
     const [goTo,setGoTo] = useState<string|undefined>(undefined)
-    const [feedItems,setFeedItems] = useState([])
+    const [feedItems,setFeedItems] = useState<FeedItem[]>([])
     const [secret,setSecret] = useState<string|null>(null)
     const [pinModalOpen,setPinModalOpen] = useState(false)
     const [authenticated,setAuthenticated] = useState<boolean|undefined>(undefined)
@@ -36,8 +36,10 @@ export default function Feed() {
         const items = event.clipboardData.items
         var data, type
 
+        console.log(items)
         for (let i=0; i<items.length;i++) {
-            if (items[i].type.indexOf("image") === 0) {
+            if (items[i].type.indexOf("image") === 0 && items[i].kind === "file") {
+                console.log(items[i])
                 type = items[i].type
                 data = items[i].getAsFile()
                 break
@@ -85,7 +87,18 @@ export default function Feed() {
         .then(r => {
             if (r.status === 200) {
                 r.json().then((j) => {
-                    setFeedItems(j["items"])
+                    // const newItems = j["items"].map((i: FeedItemProps) => {
+                    //     for (j=0;j<items!.length;j++) {
+                    //         if (items[j].name === i.name) {
+                    //             return items[j]
+                    //         }
+                    //     }
+                    //     return i
+                    // })
+                    setFeedItems(j["items"].map((f:FeedItem) => {
+                        f.feed = params.feed!
+                        return f
+                    }))
                     setSecret(j["secret"])
                 })
                 setAuthenticated(true)
@@ -129,10 +142,12 @@ export default function Feed() {
         } else if (e.key === "2") {
             setPinModalOpen(true)
         }
-      };
+    };
+
     const handlePinModalCancel = () => {
         setPinModalOpen(false)
     }
+
     const items: MenuProps['items'] = [
         {
           label: 'Copy Permalink',
@@ -176,8 +191,8 @@ export default function Feed() {
     
     const [deleteModalOpen,setDeleteModalOpen] = useState(false)
     const [deleteFileName, setDeleteFileName] = useState<string|undefined>(undefined)
-    const deleteItem = (item: string) => {
-        setDeleteFileName(item)
+    const deleteItem = (item: FeedItem) => {
+        setDeleteFileName(item.name)
         setDeleteModalOpen(true)
     }
     const doDelete = () => {
@@ -249,8 +264,8 @@ export default function Feed() {
             <YBPasteCard empty={feedItems.length === 0}/>
         </div>
 
-        {feedItems.map((f) => 
-            <YBFeedItem item={f} feed={params.feed!} onDelete={deleteItem}/>
+        {feedItems.map((f:FeedItem) => 
+            <YBFeedItem item={f} onDelete={deleteItem}/>
         )}
         </>
         :""}
