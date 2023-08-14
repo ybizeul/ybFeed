@@ -46,6 +46,22 @@ authentication would be needed to get access once the cookie is expired
 the filesystem
 - No rate control or capacity limits, quite exposed to flooding as it is
 
+### Environment variables
+| Variable name | Description |
+|---------------|-------------|
+| `YBF_DATA_DIR` | points to an alternative direcotry to store data, default is `./data/` in current directory. |
+| `YBF_HTTP_PORT` | TCP port to run the server, default is `8080`. |
+
+### Installation
+
+#### Using Docker
+
+```
+git clone https://github.com/ybizeul/ybFeed.git
+cd ybFeed
+docker compose up -d
+```
+
 ### Building
 
 #### Using Makefile
@@ -75,22 +91,9 @@ go build -o ybFeed *.go
 # Point your browser to port 8080
 ```
 
-### Environment variables
-| Variable name | Description |
-|---------------|-------------|
-| `YBF_DATA_DIR` | points to an alternative direcotry to store data, default is `./data/` in current directory. |
-| `YBF_HTTP_PORT` | TCP port to run the server, default is `8080`. |
-
-### Docker
-
 #### Building container
 
 ```
 docker build . -t ybfeed
 ```
 
-#### Running with Compose
-
-```
-docker compose up -d
-```
