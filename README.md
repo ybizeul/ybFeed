@@ -37,6 +37,7 @@ This is just a side project I'm working on, so there is probably lots of issues
 
 Here are some I already identified :
 
+- Paste might not work over non secured connections (https)
 - ybFeed relies on a cookie to authenticate the session, if the cookie is lost
 there is no easy way to retrieve the feed (you can get it from the `secret` file
 in the feed directory)
@@ -61,6 +62,8 @@ git clone https://github.com/ybizeul/ybFeed.git
 cd ybFeed
 docker compose up -d
 ```
+
+You can now point your browser to http://localhost:8080/
 
 ### Building
 
