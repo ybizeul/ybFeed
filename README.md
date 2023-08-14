@@ -42,7 +42,6 @@ there is no easy way to retrieve the feed (you can get it from the `secret` file
 in the feed directory)
 - Most modern browser won't honor loog cookie lifetime, some alternative
 authentication would be needed to get access once the cookie is expired
-- Mobile usage is pretty limited as you cannot paste data currently
 - Security could probably be improved, tokens and PINs are stored in clear on
 the filesystem
 - No rate control or capacity limits, quite exposed to flooding as it is
