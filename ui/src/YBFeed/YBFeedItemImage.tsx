@@ -19,7 +19,6 @@ export function FeedItemImage(props:FeedItemProps) {
                 c.width = img.naturalWidth
                 c.height = img.naturalHeight
                 ctx?.drawImage(img,0,0)
-                console.log("Image is " + c.width + "x" + c.height)
                 c.toBlob(blob=>{
                     b(blob!)
                 },'image/png')
