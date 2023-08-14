@@ -43,6 +43,9 @@ export function YBPasteCard(props:PasteCardProps) {
             headers: requestHeaders,
             credentials: "include"
           })
+          .then(() => {
+            setTextFieldValue("")
+          })
     }
     const handleFinish = () => {
         const requestHeaders: HeadersInit = new Headers();
@@ -53,7 +56,9 @@ export function YBPasteCard(props:PasteCardProps) {
             headers: requestHeaders,
             credentials: "include"
           })
-        setTextFieldValue("")
+          .then(() => {
+            setTextFieldValue("")
+          })
     }
     useEffect(() => {
         const handleResize = () => {
