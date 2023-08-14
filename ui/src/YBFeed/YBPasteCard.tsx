@@ -62,7 +62,7 @@ export function YBPasteCard(props:PasteCardProps) {
     }
     useEffect(() => {
         const handleResize = () => {
-          setIsMobile(window.innerWidth <= 576); // Adjust the breakpoint as needed
+            setIsMobile(window.innerWidth <= 734); // Adjust the breakpoint as needed
         };
     
         handleResize(); // Initial call to set the initial state
