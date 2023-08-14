@@ -1,6 +1,6 @@
 node_modules
 ui/build/
-data/
+/data/
 **/.DS_Store
 /ybFeed
 dist/
