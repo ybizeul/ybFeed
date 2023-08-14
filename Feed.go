@@ -186,6 +186,7 @@ func GetFeed(feedName string, secret string) (*Feed, error) {
 
 func (feed *Feed) GetItem(item string) ([]byte, error) {
 	// Read item content
+	slog.Info("Getting Item", slog.String("feed", feed.Name), slog.String("name", item))
 	var content []byte
 	content, err := os.ReadFile(path.Join(feed.path, item))
 	if err != nil {

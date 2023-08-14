@@ -10,7 +10,7 @@ import {
 import React from 'react';
 
 import Root from "./routes/root";
-import Feed from "./routes/feed";
+import FeedComponent from "./routes/feed";
 
 const router = createBrowserRouter([
   {
@@ -19,7 +19,7 @@ const router = createBrowserRouter([
   },
   {
     path: "/:feed",
-    element: <Feed />,
+    element: <FeedComponent />,
   },
 ]);
 

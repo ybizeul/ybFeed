@@ -45,7 +45,6 @@ authentication would be needed to get access once the cookie is expired
 - Mobile usage is pretty limited as you cannot paste data currently
 - Security could probably be improved, tokens and PINs are stored in clear on
 the filesystem
-- Whole page with content is reloaded every 2s
 - No rate control or capacity limits, quite exposed to flooding as it is
 
 ### Building
