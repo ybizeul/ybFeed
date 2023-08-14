@@ -10,9 +10,7 @@ export function FeedItemText(props:FeedItemProps) {
 
     console.log("FeedItemText")
     const copyItem = () => {
-        console.log("copy item")
         navigator.clipboard.writeText(textValue)
-        message.info("Copied to clipboard!")
     }
 
     useEffect(() => {

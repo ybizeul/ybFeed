@@ -71,9 +71,9 @@ export function YBFeedItem(props: FeedItemProps) {
 
     let component
     if (type === 0){
-        component = FeedItemText({item: item, showCopyButton:!isMobile})
+        component = FeedItemText({item: item, showCopyButton:true})
     } else {
-        component = FeedItemImage({item: item, showCopyButton:!isMobile})
+        component = FeedItemImage({item: item, showCopyButton:true})
     }
 
 
