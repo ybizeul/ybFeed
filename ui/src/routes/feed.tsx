@@ -1,14 +1,13 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 
 import { useParams } from 'react-router';
 import { Navigate } from 'react-router';
 
 import queryString from 'query-string';
 
-import { Button, Form, Input, Modal, Row, Col } from 'antd';
+import { Button, Form, Input, Dropdown, Space, Modal, Row, Col } from 'antd';
 import { message } from 'antd';
 import type { MenuProps } from 'antd';
-import { Dropdown, Space } from 'antd';
 
 import {
     LinkOutlined,
@@ -16,17 +15,21 @@ import {
     DownOutlined
   } from '@ant-design/icons';
 
-import YBBreadCrumb from '../YBBreadCrumb'
-import YBPasteCard from '../YBPasteCard'
-import {YBFeedItem,FeedItem} from '../YBFeedItem'
+import { YBBreadCrumb, YBPasteCard, FeedItem, FeedItems } from '../YBFeed'
 
-export default function Feed() {
-    const params=useParams()
+interface Feed {
+    items: FeedItem[],
+    secret: string
+}
+
+export default function FeedComponent() {
+    const { feed } = useParams();
     const [goTo,setGoTo] = useState<string|undefined>(undefined)
-    const [feedItems,setFeedItems] = useState<FeedItem[]>([])
+    const feedItems = useRef<FeedItem[]>([])
     const [secret,setSecret] = useState<string|null>(null)
     const [pinModalOpen,setPinModalOpen] = useState(false)
     const [authenticated,setAuthenticated] = useState<boolean|undefined>(undefined)
+    const [updateGeneration,setUpdateGeneration] = useState(0)
 
     //
     // Pasting Data
@@ -36,10 +39,8 @@ export default function Feed() {
         const items = event.clipboardData.items
         var data, type
 
-        console.log(items)
         for (let i=0; i<items.length;i++) {
             if (items[i].type.indexOf("image") === 0 && items[i].kind === "file") {
-                console.log(items[i])
                 type = items[i].type
                 data = items[i].getAsFile()
                 break
@@ -57,7 +58,7 @@ export default function Feed() {
 
         const requestHeaders: HeadersInit = new Headers();
         requestHeaders.set("Content-Type", type)
-        fetch("/api/feed/" + params.feed,{
+        fetch("/api/feed/" + feed,{
             method: "POST",
             body: data,
             headers: requestHeaders,
@@ -81,25 +82,51 @@ export default function Feed() {
     // Update feed is run every 2s or o, some events
     //
     function update() {
-        fetch("/api/feed/"+params.feed,{
+        fetch("/api/feed/"+feed,{
             credentials: "include"
           })
         .then(r => {
             if (r.status === 200) {
-                r.json().then((j) => {
-                    // const newItems = j["items"].map((i: FeedItemProps) => {
-                    //     for (j=0;j<items!.length;j++) {
-                    //         if (items[j].name === i.name) {
-                    //             return items[j]
-                    //         }
-                    //     }
-                    //     return i
-                    // })
-                    setFeedItems(j["items"].map((f:FeedItem) => {
-                        f.feed = params.feed!
-                        return f
-                    }))
-                    setSecret(j["secret"])
+                let update=false
+                r.json().then((f: Feed) => {
+                    // Remove any deleted items
+                    const keep: FeedItem[] = []
+                    feedItems.current.map((i:FeedItem) => {
+                        let changed = false
+                        for (let j=0;j<f["items"].length;j++) {
+                            const current_new_item = f["items"][j]
+                            if (current_new_item.name === i.name) {
+                                changed = true
+                                keep.push(i)
+                            }
+                        }
+                        if (changed === false) {
+                            update=true
+                        }
+                        return null
+                    })
+                    feedItems.current.length = 0
+                    feedItems.current = [...keep]
+
+                    // Add new items
+                    const newItems = f["items"].map((i: FeedItem) => {
+                        for (let j=0;j<feedItems.current.length;j++) {
+                                const current_existing_item = feedItems.current[j]
+                                if (current_existing_item.name === i.name) {
+                                    return feedItems.current[j]
+                                }
+                        }
+                        update=true
+                        i.feed = feed!
+                        return i
+                    })
+
+                    feedItems.current.length = 0
+                    feedItems.current = [...newItems]
+                    if (update === true) {
+                        setUpdateGeneration(updateGeneration+1)
+                    }
+                    setSecret(f["secret"])
                 })
                 setAuthenticated(true)
             }
@@ -118,11 +145,11 @@ export default function Feed() {
             let query = queryString.parse(window.location.search)
 
             if ("secret" in query) {          
-                fetch("/api/feed/"+params.feed+"?secret="+query.secret,{
+                fetch("/api/feed/"+feed+"?secret="+query.secret,{
                     credentials: "include"
                   })
                   .then(() => {
-                    setGoTo("/" + params.feed)
+                    setGoTo("/" + feed)
                     update()
                   })
             }
@@ -133,7 +160,7 @@ export default function Feed() {
                 window.clearInterval(interval)
             }
             // eslint-disable-next-line react-hooks/exhaustive-deps
-        },[]
+        },[updateGeneration]
     )
 
     const handleMenuClick: MenuProps['onClick'] = (e) => {
@@ -165,7 +192,7 @@ export default function Feed() {
         onClick: handleMenuClick,
       };
       const setPIN = (e: any) => {
-        fetch("/api/feed/"+params.feed,{
+        fetch("/api/feed/"+feed,{
             method: "PATCH",
             credentials: "include",
             body: e.PIN
@@ -176,7 +203,7 @@ export default function Feed() {
           })
       }
       const sendPIN = (e: any) => {
-        fetch("/api/feed/"+params.feed+"?secret=" + e.PIN,{
+        fetch("/api/feed/"+feed+"?secret=" + e.PIN,{
             credentials: "include"
           })
           .then(() => {
@@ -184,35 +211,6 @@ export default function Feed() {
           })
       }
     
-
-    //
-    // Delete an item in the feed
-    //
-    
-    const [deleteModalOpen,setDeleteModalOpen] = useState(false)
-    const [deleteFileName, setDeleteFileName] = useState<string|undefined>(undefined)
-    const deleteItem = (item: FeedItem) => {
-        setDeleteFileName(item.name)
-        setDeleteModalOpen(true)
-    }
-    const doDelete = () => {
-        fetch("/api/feed/"+params.feed+"/"+deleteFileName,{
-            method: "DELETE",
-            credentials: "include"
-          })
-        .then(r => {
-            update()
-        })
-        setDeleteModalOpen(false)
-    }
-
-    const handleDeleteModalOK = () => {
-        doDelete()
-    } 
-    
-    const handleDeleteModalCancel = () => {
-        setDeleteModalOpen(false)
-    } 
     return (
         <>
         {goTo?
@@ -243,7 +241,6 @@ export default function Feed() {
                 action="/"
                 onFinish={setPIN}
                 >
-
                             <Form.Item
                                 name="PIN"
                                 rules={[{ required: true, type: 'string', len: 4, pattern: RegExp("[0-9]{4}"), validateTrigger:"onBlur" }]}
@@ -257,16 +254,12 @@ export default function Feed() {
                 </Row>
 
         </Modal>
-        <Modal title="Delete" className="DeleteModal" open={deleteModalOpen} onOk={handleDeleteModalOK} onCancel={handleDeleteModalCancel} destroyOnClose={true}>
-            <p>Do you really want to delete file "{deleteFileName}"?</p>
-        </Modal>
         <div className="pasteCard" onPaste={handleOnPaste}>
-            <YBPasteCard empty={feedItems.length === 0}/>
+            <YBPasteCard empty={feedItems.current.length === 0}/>
         </div>
 
-        {feedItems.map((f:FeedItem) => 
-            <YBFeedItem item={f} onDelete={deleteItem}/>
-        )}
+        <FeedItems items={feedItems.current} onUpdate={update} />
+        
         </>
         :""}
 

@@ -1,7 +1,7 @@
 import { Navigate } from 'react-router';
 import { Form, Input, Row, Col } from 'antd';
 import { useState } from "react"
-import YBBreadCrumb from '../YBBreadCrumb'
+import { YBBreadCrumb } from '../YBFeed'
 
 
 export default function Root() {
