@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { message } from 'antd'
 import { Button } from 'antd'
 import { MdContentCopy } from "react-icons/md";
 import { FeedItemProps } from './YBFeedItem'
@@ -10,6 +11,7 @@ export function FeedItemText(props:FeedItemProps) {
 
     const copyItem = () => {
         navigator.clipboard.writeText(textValue)
+        message.info("Copied to clipboard!")
     }
 
     useEffect(() => {
