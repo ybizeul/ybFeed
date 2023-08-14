@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState,useEffect } from 'react'
 import { Space, Modal } from 'antd'
 
 import {
@@ -19,6 +19,7 @@ export interface FeedItem {
 
 export interface FeedItemProps {
     item: FeedItem,
+    showCopyButton?: boolean
     onUpdate?: (item: FeedItem) => void
 }
 
@@ -38,7 +39,9 @@ function YBHeading(props: FeedItemHeadingProps) {
             method: "DELETE",
             credentials: "include"
             })
+            .then(() => setDeleteModalOpen(false))
     }
+
     return (
         <div className='heading'>
         <Modal title="Delete" className="DeleteModal" open={deleteModalOpen} onOk={doDeleteItem} onCancel={() => setDeleteModalOpen(false)} >
@@ -62,14 +65,31 @@ export function YBFeedItem(props: FeedItemProps) {
     const { item } = props
     const { type } = props.item
 
+    const [isMobile, setIsMobile] = useState(false)
+
     console.log("Render YBFeedItem")
 
     let component
     if (type === 0){
-        component = FeedItemText({item: item})
+        component = FeedItemText({item: item, showCopyButton:!isMobile})
     } else {
-        component = FeedItemImage({item: item})
+        component = FeedItemImage({item: item, showCopyButton:!isMobile})
     }
+
+
+    useEffect(() => {
+        const handleResize = () => {
+          setIsMobile(window.innerWidth <= 576); // Adjust the breakpoint as needed
+        };
+    
+        handleResize(); // Initial call to set the initial state
+    
+        window.addEventListener('resize', handleResize);
+    
+        return () => {
+          window.removeEventListener('resize', handleResize);
+        };
+    }, []);
 
     return(
         <div className='item'>

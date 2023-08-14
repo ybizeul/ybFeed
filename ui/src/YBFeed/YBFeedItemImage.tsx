@@ -3,7 +3,7 @@ import { MdContentCopy } from "react-icons/md";
 import { FeedItemProps } from './YBFeedItem'
 
 export function FeedItemImage(props:FeedItemProps) {
-    const { item } = props
+    const { item, showCopyButton } = props
     const {name, feed} = item
 
     const copyItem = () => {
@@ -48,7 +48,9 @@ export function FeedItemImage(props:FeedItemProps) {
                 src={"/api/feed/"+feed+"/"+name}
                 preview={false}
                 />
+                {showCopyButton?
                 <Button icon={<MdContentCopy />} onClick={copyItem} />
+                :""}
             </div>
         </div>
     )

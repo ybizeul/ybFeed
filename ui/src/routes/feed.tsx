@@ -32,44 +32,6 @@ export default function FeedComponent() {
     const [updateGeneration,setUpdateGeneration] = useState(0)
 
     //
-    // Pasting Data
-    //
-    
-    const handleOnPaste = (event: React.ClipboardEvent) => {
-        const items = event.clipboardData.items
-        var data, type
-
-        for (let i=0; i<items.length;i++) {
-            if (items[i].type.indexOf("image") === 0 && items[i].kind === "file") {
-                type = items[i].type
-                data = items[i].getAsFile()
-                break
-            }
-            else if (items[i].type === "text/plain") {
-                type = items[i].type
-                data = event.clipboardData.getData('text')
-                break
-            }
-        }
-
-        if (type === undefined) {
-            return
-        }
-
-        const requestHeaders: HeadersInit = new Headers();
-        requestHeaders.set("Content-Type", type)
-        fetch("/api/feed/" + feed,{
-            method: "POST",
-            body: data,
-            headers: requestHeaders,
-            credentials: "include"
-          })
-          .then(() => {
-             update()
-          })
-    }
-
-    //
     // Creating links to feed
     //
     const copyLink = () => {
@@ -254,7 +216,8 @@ export default function FeedComponent() {
                 </Row>
 
         </Modal>
-        <div className="pasteCard" onPaste={handleOnPaste}>
+
+        <div className="pasteCard">
             <YBPasteCard empty={feedItems.current.length === 0}/>
         </div>
 

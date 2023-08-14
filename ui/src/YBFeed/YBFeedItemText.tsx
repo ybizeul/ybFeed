@@ -4,7 +4,7 @@ import { MdContentCopy } from "react-icons/md";
 import { FeedItemProps } from './YBFeedItem'
 
 export function FeedItemText(props:FeedItemProps) {
-    const { item } = props
+    const { item, showCopyButton } = props
     const { name, feed } = item
     const [textValue,setTextValue] = useState("")
 
@@ -32,7 +32,9 @@ export function FeedItemText(props:FeedItemProps) {
         <div className="itemContainer">
             <div className="itemText">
                 <pre style={{overflowY:"scroll"}}>{textValue}</pre>
+                {showCopyButton===undefined || showCopyButton === true?
                 <Button icon={<MdContentCopy />} onClick={copyItem} />
+                :""}
             </div>
         </div>
     )
