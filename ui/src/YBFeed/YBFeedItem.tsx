@@ -1,4 +1,4 @@
-import { useState,useEffect } from 'react'
+import { useState } from 'react'
 import { Space, Modal } from 'antd'
 
 import {
@@ -65,31 +65,12 @@ export function YBFeedItem(props: FeedItemProps) {
     const { item } = props
     const { type } = props.item
 
-    const [isMobile, setIsMobile] = useState(false)
-
-    console.log("Render YBFeedItem")
-
     let component
     if (type === 0){
         component = FeedItemText({item: item, showCopyButton:true})
     } else {
         component = FeedItemImage({item: item, showCopyButton:true})
     }
-
-
-    useEffect(() => {
-        const handleResize = () => {
-          setIsMobile(window.innerWidth <= 576); // Adjust the breakpoint as needed
-        };
-    
-        handleResize(); // Initial call to set the initial state
-    
-        window.addEventListener('resize', handleResize);
-    
-        return () => {
-          window.removeEventListener('resize', handleResize);
-        };
-    }, []);
 
     return(
         <div className='item'>
