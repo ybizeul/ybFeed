@@ -3,13 +3,21 @@ import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
+import { StyleProvider } from '@ant-design/cssinjs';
 
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
 );
+
+// var t = theme.defaultAlgorithm
+// if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+//   t = theme.darkAlgorithm
+// }
 root.render(
   <React.StrictMode>
-    <App />
+    <StyleProvider hashPriority="high">
+      <App />
+    </StyleProvider>
   </React.StrictMode>
 );
 
