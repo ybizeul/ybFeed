@@ -9,7 +9,6 @@ export default function Root() {
     const [goToPath,setGoToPath] = useState("")
     
     const handleFinish = (values: any) => {
-        console.log("finish")
         setGoToPath("/" + feed)
     }
 

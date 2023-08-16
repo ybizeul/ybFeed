@@ -106,7 +106,7 @@ export default function FeedComponent() {
             const interval = window.setInterval(update,2000)
             let query = queryString.parse(window.location.search)
 
-            if ("secret" in query) {          
+            if ("secret" in query) {         
                 fetch("/api/feed/"+feed+"?secret="+query.secret,{
                     credentials: "include"
                   })

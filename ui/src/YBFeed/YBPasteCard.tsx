@@ -1,6 +1,7 @@
 import { useState,useEffect } from 'react'
 import { Input, Form } from 'antd'
 import { useParams } from 'react-router-dom'
+
 interface PasteCardProps {
     empty?: boolean
 }
@@ -73,8 +74,9 @@ export function YBPasteCard(props:PasteCardProps) {
           window.removeEventListener('resize', handleResize);
         };
     }, []);
+
     return (
-        <div className="pasteDiv d-xs-none" tabIndex={0} onPaste={handleOnPaste}>
+        <div className="pasteDiv" tabIndex={0} onPaste={handleOnPaste} >
             {(props.empty === true)?<p>Your feed is empty</p>:""}
             {isMobile?
                 <Form action="/" onFinish={handleFinish}>

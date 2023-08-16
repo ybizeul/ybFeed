@@ -7,8 +7,6 @@ export interface FeedItemsProps {
 
 export function FeedItems(props: FeedItemsProps) {
     const { items, onUpdate } = props
-
-    console.log("Render FeedItems")
     
     return(
         <>
