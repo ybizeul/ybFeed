@@ -48,7 +48,7 @@ type FeedItem struct {
 }
 
 func NewFeed(feedName string) (*Feed, error) {
-	log.Infof("Creating new feed %s", feedName)
+	slog.Info("Creating new feed", slog.String("feed", feedName))
 	os.Mkdir(path.Join(dataDir, feedName), 0700)
 	secret := uuid.NewString()
 	err := os.WriteFile(path.Join(dataDir, feedName, "secret"), []byte(secret), 0600)
@@ -67,7 +67,9 @@ func NewFeed(feedName string) (*Feed, error) {
 func GetFeed(feedName string, secret string) (*Feed, error) {
 	feedPath := path.Join(dataDir, feedName)
 
-	log.Debugf("Getting feed %s with secret[%d]", feedName, len(secret))
+	feedLog := slog.Default().With(slog.String("feed", feedName))
+
+	feedLog.Debug("Getting feed", slog.Int("secret_len", len(secret)))
 
 	if _, err := os.Stat(feedPath); os.IsNotExist(err) {
 		return nil, &FeedError{
@@ -77,43 +79,51 @@ func GetFeed(feedName string, secret string) (*Feed, error) {
 	}
 
 	if secret == "" {
-		log.Debugf("No secret was provided, returning 401")
+		code := 500
+		feedLog.Error("No secret was provided", slog.Int("return", code))
 		return nil, &FeedError{
-			Code:    401,
+			Code:    code,
 			Message: "Unauthorized",
 		}
 	}
 
 	if len(secret) != 4 {
 		feedSecret, err := os.ReadFile(path.Join(feedPath, "secret"))
-
+		code := 500
 		if err != nil {
+			feedLog.Error("Unable to read secret", slog.Int("return", code))
 			return nil, &FeedError{
-				Code:    500,
+				Code:    code,
 				Message: err.Error(),
 			}
 		}
 
 		if string(feedSecret) != secret {
+			code := 401
+			feedLog.Error("Invalid secret", slog.Int("return", code))
 			return nil, &FeedError{
-				Code:    401,
+				Code:    code,
 				Message: "Authentication failed",
 			}
 		}
 	} else {
 		stat, err := os.Stat(path.Join(feedPath, "pin"))
 		if err != nil {
+			code := 500
+			feedLog.Error("Unable to read PIN", slog.Int("return", code))
 			return nil, &FeedError{
-				Code:    500,
+				Code:    code,
 				Message: err.Error(),
 			}
 		}
 
 		maxTime := stat.ModTime().Add(2 * time.Minute)
 		if maxTime.Before(time.Now()) {
+			code := 401
+			feedLog.Warn("PIN expired", slog.Int("return", code))
 			os.Remove(path.Join(feedPath, "pin"))
 			return nil, &FeedError{
-				Code:    401,
+				Code:    code,
 				Message: "Authentication failed",
 			}
 		} else {
@@ -122,21 +132,25 @@ func GetFeed(feedName string, secret string) (*Feed, error) {
 
 		s, err := os.ReadFile(path.Join(feedPath, "secret"))
 
-		secret = string(s)
-
 		if err != nil {
+			code := 500
+			feedLog.Error("Unable to read secret", slog.Int("return", code))
 			return nil, &FeedError{
-				Code:    500,
+				Code:    code,
 				Message: err.Error(),
 			}
 		}
+		secret = string(s)
 	}
 
 	var d []fs.DirEntry
 	var err error
 	if d, err = os.ReadDir(feedPath); err != nil {
+		code := 500
+		feedLog.Error("Unable to feed content", slog.Int("return", code))
+
 		return nil, &FeedError{
-			Code:    500,
+			Code:    code,
 			Message: "Unable to open directory for read",
 		}
 	}
@@ -154,9 +168,14 @@ func GetFeed(feedName string, secret string) (*Feed, error) {
 		}
 		info, err := f.Info()
 		if err != nil {
+			code := 500
+			e := "Unable to read file info"
+
+			feedLog.Error(e, slog.Int("return", code))
+
 			return nil, &FeedError{
-				Code:    500,
-				Message: "Unable to read file info",
+				Code:    code,
+				Message: e,
 			}
 		}
 

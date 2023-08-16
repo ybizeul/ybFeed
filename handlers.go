@@ -55,8 +55,9 @@ func rootHandlerFunc(w http.ResponseWriter, r *http.Request) {
 //
 
 func apiHandleFunc(w http.ResponseWriter, r *http.Request) {
-	slog.Default().WithGroup("http").Debug("API request", slog.Any("request", r))
-	split := strings.Split(r.URL.Path, "/")
+	//slog.Default().WithGroup("http").Debug("API request", slog.Any("request", r))
+	p := strings.TrimSuffix(r.URL.Path, "/")
+	split := strings.Split(p, "/")
 	if len(split) == 4 {
 		if r.Method == "GET" {
 			feedHandlerFunc(w, r)
