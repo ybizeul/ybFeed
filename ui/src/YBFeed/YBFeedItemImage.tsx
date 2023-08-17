@@ -43,7 +43,6 @@ export function FeedItemImage(props:FeedItemProps) {
         <div className="itemContainer">
             <div className="itemImg">
                 <Image
-                className="itemImage"
                 src={"/api/feed/"+feed+"/"+name}
                 preview={false}
                 />
