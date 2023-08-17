@@ -83,7 +83,7 @@ export function YBPasteCard(props:PasteCardProps) {
                     <Input placeholder='Paste Here' value={textFieldValue} onChange={(e) => setTextFieldValue(e.currentTarget.value)}/>
                 </Form>
             :
-                "Paste content here"
+                <p>Paste content here</p>
             }
         </div>
     )

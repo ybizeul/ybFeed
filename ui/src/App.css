@@ -22,9 +22,9 @@ DIV.item {
   margin-top: 3em;
   margin-bottom: 3em;
 }
-#root div.ant-layout {
+/* #root div.ant-layout {
   background-color: rgb(245,245,245);
-}
+} */
 DIV.heading {
   /* border-bottom: solid darkgray 1px; */
   border-bottom-style: solid;
@@ -87,7 +87,10 @@ DIV.App>DIV.ant-layout {
   html {
     color: rgba(255,255,255,0.82)
   }
-  #root a, #root p, #root .ant-breadcrumb-separator, #root .ant-breadcrumb-link {
+  .pasteDiv:focus-within  {
+    background-color: rgb(40,40,40);
+  };
+  /* #root a, #root p, #root .ant-breadcrumb-separator, #root .ant-breadcrumb-link {
     color: rgba(255,255,255,0.82)
   }
   #root div.ant-layout {
@@ -106,5 +109,5 @@ DIV.App>DIV.ant-layout {
   }
   #root ant-dropdown {
 
-  }
+  } */
 }

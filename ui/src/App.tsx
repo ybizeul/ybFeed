@@ -1,5 +1,6 @@
 import './App.css';
-import { Row, Col, Layout } from 'antd';
+import { Row, Col, Layout, ConfigProvider, theme } from 'antd';
+import { useEffect, useState, useCallback } from "react";
 import { Content } from 'antd/es/layout/layout';
 
 import {
@@ -23,7 +24,34 @@ const router = createBrowserRouter([
   },
 ]);
 
-const App: React.FC = () => (
+const App: React.FC = () => {
+  const [darkMode, setDarkMode] = useState(false);
+  const windowQuery = window.matchMedia("(prefers-color-scheme:dark)");
+
+  const darkModeChange = useCallback((event: MediaQueryListEvent) => {
+    console.log(event.matches ? true : false);
+    setDarkMode(event.matches ? true : false);
+  }, []);
+
+  useEffect(() => {
+    windowQuery.addEventListener("change", darkModeChange);
+    return () => {
+      windowQuery.removeEventListener("change", darkModeChange);
+    };
+  }, [windowQuery, darkModeChange]);
+
+  useEffect(() => {
+    console.log(windowQuery.matches ? true : false);
+    setDarkMode(windowQuery.matches ? true : false);
+    // eslint-disable-line react-hooks/exhaustive-deps
+  }, [windowQuery.matches]);
+
+  return (
+    <ConfigProvider
+    theme={{
+      algorithm: darkMode ? theme.darkAlgorithm : theme.compactAlgorithm
+    }}
+  >
   <div className="App">
     <Layout style={{minHeight:"100vh"}}>
         <Content>
@@ -37,6 +65,7 @@ const App: React.FC = () => (
       </Content>
     </Layout>
   </div>
-);
+  </ConfigProvider>
+)};
 
 export default App;
