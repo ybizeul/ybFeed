@@ -1,4 +1,4 @@
-all: ui go
+all: ui go push
 
 ui:
 	cd ui; \
@@ -12,6 +12,9 @@ ui-run: ui run
 
 run:
 	go run *.go
+
+push:
+	ko build -B -t `git describe --tags`
 
 clean:
 	rm -f ybFeed

@@ -16,3 +16,5 @@ COPY --from=golang /ybFeed /ybFeed
 EXPOSE 8080
 
 ENTRYPOINT [ "/ybFeed" ]
+
+LABEL "org.opencontainers.image.authors"="yann@tynsoe.org"
