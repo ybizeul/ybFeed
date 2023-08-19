@@ -6,6 +6,9 @@ jobs:
   release:
     name: release
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     steps:
 
       # Checkout code
@@ -36,9 +39,6 @@ jobs:
           distribution: goreleaser
           version: latest
           args: release --clean
-        env:
-            GITHUB_TOKEN: ${{ secrets.PACKAGE_TOKEN }}
-
       # Build docker image
       - uses: ko-build/setup-ko@v0.6
       - run: ko build
