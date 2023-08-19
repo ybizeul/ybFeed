@@ -11,11 +11,12 @@ export function YBPasteCard(props:PasteCardProps) {
     const [textFieldValue,setTextFieldValue] = useState("")
     const {feed} = useParams()
 
-       //
+    //
     // Pasting Data
     //
     
     const handleOnPaste = (event: React.ClipboardEvent) => {
+        console.log("test")
         const items = event.clipboardData.items
         var data, type
         setTextFieldValue("")
@@ -76,14 +77,14 @@ export function YBPasteCard(props:PasteCardProps) {
     }, []);
 
     return (
-        <div className="pasteDiv" tabIndex={0} onPaste={handleOnPaste} >
+        <div id="pasteCard" className="pasteDiv" tabIndex={0} onPaste={handleOnPaste} >
             {(props.empty === true)?<p>Your feed is empty</p>:""}
             {isMobile?
                 <Form action="/" onFinish={handleFinish}>
                     <Input placeholder='Paste Here' value={textFieldValue} onChange={(e) => setTextFieldValue(e.currentTarget.value)}/>
                 </Form>
             :
-                <p>Paste content here</p>
+                <p>Click and paste content here</p>
             }
         </div>
     )
