@@ -7,8 +7,9 @@ jobs:
   release:
     name: release
     runs-on: ubuntu-latest
-    env:
-      GITHUB_TOKEN: ${{ secrets.PACKAGE_TOKEN }}
+    permissions:
+      contents: read
+      packages: write
     steps:
       # Checkout code
       - uses: actions/checkout@v3
