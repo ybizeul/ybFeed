@@ -26,6 +26,6 @@ jobs:
 
       # Build docker image
       - uses: ko-build/setup-ko@v0.6
-      - run: ko build -B
+      - run: ko build -B --sbom none
         env:
           KO_DOCKER_REPO: ghcr.io/ybizeul
