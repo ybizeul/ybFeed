@@ -25,3 +25,5 @@ jobs:
       # Build docker image
       - uses: ko-build/setup-ko@v0.6
       - run: ko build -B
+        env:
+          KO_DOCKER_REPO: ghcr.io/ybizeul
