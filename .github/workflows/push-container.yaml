@@ -26,6 +26,6 @@ jobs:
 
       # Build docker image
       - uses: ko-build/setup-ko@v0.6
-      - run: ko build -B --platform all cmd/ybfeed/
+      - run: ko build -B --platform all ./cmd/ybfeed
         env:
           KO_DOCKER_REPO: ghcr.io/ybizeul
