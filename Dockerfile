@@ -1,14 +1,13 @@
 FROM node AS node
-WORKDIR /app
-ADD ui /app/ui
-RUN ls
-RUN cd /app/ui/; npm install; npm run build
+WORKDIR /app/web
+ADD web/ui /app/web/ui
+RUN cd /app/web/ui/; npm install; npm run build
 
 FROM golang AS golang
 WORKDIR /app
 ADD . /app/
-COPY --from=node /app/ui/build/ /app/ui/build/
-RUN CGO_ENABLED=0 go build -o /ybFeed *.go
+COPY --from=node /app/web/ui/build/ /app/web/ui/build/
+RUN CGO_ENABLED=0 go build -o /ybFeed cmd/ybfeed/*.go
 
 FROM scratch
 COPY --from=golang /ybFeed /ybFeed

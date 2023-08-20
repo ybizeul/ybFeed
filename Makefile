@@ -1,7 +1,7 @@
 all: ui go push
 
 ui:
-	cd ui; \
+	cd web/ui/; \
 	npm install; \
 	npm run build
 
@@ -18,6 +18,6 @@ push:
 
 clean:
 	rm -f ybFeed
-	rm -rf ui/node_modules
+	rm -rf web/ui/node_modules
 
 .PHONY: ui

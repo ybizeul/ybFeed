@@ -90,20 +90,20 @@ make
 Once you cloned the repository, issue the following commands :
 ```
 # Install node dependencies
-cd ui
+cd web/ui/
 npm install
 
 # Build UI
 npm run build
 
 # Build Go binary
-cd ../
-go build -o ybFeed *.go
+cd ../../
+go build -o ybFeed cmd/ybfeed/*.go
 
 # Run ybFeed
 ./ybFeed
 
-# Point your browser to port 8080
+# Point your browser to port http://localhost:8080
 ```
 
 #### Building container
