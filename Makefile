@@ -6,12 +6,12 @@ ui:
 	npm run build
 
 go:
-	go build -o ybFeed *.go
+	go build -o ybFeed cmd/ybfeed/*.go
 
 ui-run: ui run
 
 run:
-	go run *.go
+	go run cmd/ybfeed/*.go
 
 push:
 	ko build -B -t `git describe --tags`
