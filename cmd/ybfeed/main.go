@@ -73,6 +73,7 @@ func run() {
 		FeedController: feed.FeedController{Dir: dataDir},
 		DataDir:        dataDir,
 	}
+
 	// Start HTTP Server
 	r := http.NewServeMux()
 
