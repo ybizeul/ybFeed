@@ -20,12 +20,12 @@ jobs:
         with:
           node-version: 20.x
       - run: npm install
-        working-directory: ./ui
+        working-directory: ./web/ui
       - run: npm run build
-        working-directory: ./ui
+        working-directory: ./web/ui
 
       # Build docker image
       - uses: ko-build/setup-ko@v0.6
-      - run: ko build -B --platform all
+      - run: ko build -B --platform all cmd/ybfeed/
         env:
           KO_DOCKER_REPO: ghcr.io/ybizeul
