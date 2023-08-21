@@ -45,3 +45,4 @@ jobs:
       - run: ko build -B --platform all --sbom none --tags "[`git describe`]" ./cmd/ybfeed
         env:
           KO_DOCKER_REPO: ghcr.io/ybizeul
+          GITHUB_TOKEN: ${{ github.token }}
