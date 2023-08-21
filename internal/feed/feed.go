@@ -33,10 +33,6 @@ const (
 	Binary
 )
 
-type FeedController struct {
-	Dir string
-}
-
 type Feed struct {
 	Name   string
 	Secret string     `json:"secret"`
@@ -51,11 +47,11 @@ type FeedItem struct {
 	Feed *Feed        `json:"-"`
 }
 
-func (f *FeedController) NewFeed(feedName string) (*Feed, error) {
+func NewFeed(basePath string, feedName string) (*Feed, error) {
 	slog.Info("Creating new feed", slog.String("feed", feedName))
-	os.Mkdir(path.Join(f.Dir, feedName), 0700)
+	os.Mkdir(path.Join(basePath, feedName), 0700)
 	secret := uuid.NewString()
-	err := os.WriteFile(path.Join(f.Dir, feedName, "secret"), []byte(secret), 0600)
+	err := os.WriteFile(path.Join(basePath, feedName, "secret"), []byte(secret), 0600)
 	if err != nil {
 		log.Errorf("Unable towrite file %s", err.Error())
 		return nil, err
@@ -64,12 +60,12 @@ func (f *FeedController) NewFeed(feedName string) (*Feed, error) {
 		Name:   feedName,
 		Secret: secret,
 		Items:  []FeedItem{},
-		path:   path.Join(f.Dir, feedName),
+		path:   path.Join(basePath, feedName),
 	}, nil
 }
 
-func (f *FeedController) GetFeed(feedName string, secret string) (*Feed, error) {
-	feedPath := path.Join(f.Dir, feedName)
+func GetFeed(basePath string, feedName string, secret string) (*Feed, error) {
+	feedPath := path.Join(basePath, feedName)
 
 	feedLog := slog.Default().With(slog.String("feed", feedName))
 
@@ -162,7 +158,7 @@ func (f *FeedController) GetFeed(feedName string, secret string) (*Feed, error) 
 	feed := Feed{
 		Name:   feedName,
 		Secret: secret,
-		path:   path.Join(f.Dir, feedName),
+		path:   path.Join(basePath, feedName),
 	}
 
 	items := []FeedItem{}

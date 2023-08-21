@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"github.com/urfave/cli/v2"
-	"github.com/ybizeul/ybfeed/internal/feed"
 	"github.com/ybizeul/ybfeed/internal/handlers"
 	"golang.org/x/exp/slog"
 )
@@ -67,17 +66,14 @@ func main() {
 }
 func run() {
 	// Initialize file system
-	initialize()
-
-	apiController := handlers.ApiController{
-		FeedController: feed.FeedController{Dir: dataDir},
-		DataDir:        dataDir,
-	}
+	makeDataDirectory(dataDir)
 
 	// Start HTTP Server
 	r := http.NewServeMux()
 
-	r.HandleFunc("/api/", apiController.ApiHandleFunc)
+	api := handlers.ApiHandler{BasePath: dataDir}
+
+	r.HandleFunc("/api/", api.ApiHandleFunc)
 	r.HandleFunc("/", handlers.RootHandlerFunc)
 
 	slog.Info("ybFeed starting", slog.String("version", version), slog.String("data_dir", dataDir), slog.Int("port", HTTP_PORT))
@@ -88,10 +84,10 @@ func run() {
 	}
 }
 
-func initialize() {
-	if _, err := os.Stat(dataDir); os.IsNotExist(err) {
-		slog.Debug("Creating data directory", slog.String("path", dataDir))
-		if err = os.Mkdir(dataDir, 0700); err != nil {
+func makeDataDirectory(dir string) {
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		slog.Debug("Creating data directory", slog.String("path", dir))
+		if err = os.Mkdir(dir, 0700); err != nil {
 			slog.Error("Unable to create data directory", slog.String("path", dataDir), slog.String("error", err.Error()))
 			os.Exit(1)
 		}

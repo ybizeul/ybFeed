@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/fs"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -54,53 +55,51 @@ func RootHandlerFunc(w http.ResponseWriter, r *http.Request) {
 	w.Write(content)
 }
 
-//
 // Handle requests to /api
-//
-
-type ApiController struct {
-	FeedController feed.FeedController
-	DataDir        string
+type ApiHandler struct {
+	BasePath string
 }
 
-func (a *ApiController) ApiHandleFunc(w http.ResponseWriter, r *http.Request) {
-	//slog.Default().WithGroup("http").Debug("API request", slog.Any("request", r))
+func NewApiHandler(basePath string) *ApiHandler {
+	os.MkdirAll(basePath, 0700)
+	return &ApiHandler{
+		BasePath: basePath,
+	}
+}
+
+func (api *ApiHandler) ApiHandleFunc(w http.ResponseWriter, r *http.Request) {
 	p := strings.TrimSuffix(r.URL.Path, "/")
 	split := strings.Split(p, "/")
 	if len(split) == 4 {
 		if r.Method == "GET" {
-			a.feedHandlerFunc(w, r)
+			api.feedHandlerFunc(w, r)
 		} else if r.Method == "POST" {
-			a.feedPostHandlerFunc(w, r)
+			api.feedPostHandlerFunc(w, r)
 		} else if r.Method == "PATCH" {
-			a.feedPatchHandlerFunc(w, r)
+			api.feedPatchHandlerFunc(w, r)
 		}
 	} else if len(split) == 5 {
 		if r.Method == "GET" {
-			a.feedItemHandlerFunc(w, r)
+			api.feedItemHandlerFunc(w, r)
 		} else if r.Method == "DELETE" {
-			a.feedItemDeleteHandlerFunc(w, r)
+			api.feedItemDeleteHandlerFunc(w, r)
 		}
 	}
 }
 
-func (a *ApiController) feedHandlerFunc(w http.ResponseWriter, r *http.Request) {
+func (api *ApiHandler) feedHandlerFunc(w http.ResponseWriter, r *http.Request) {
 	slog.Default().WithGroup("http").Debug("Feed API request", slog.Any("request", r))
 
 	secret, fromURL := utils.GetSecret(r)
 
 	feedName := strings.Split(r.URL.Path, "/")[3]
 
-	controller := feed.FeedController{
-		Dir: a.DataDir,
-	}
-
-	f, err := controller.GetFeed(feedName, secret)
+	f, err := feed.GetFeed(api.BasePath, feedName, secret)
 
 	if err != nil {
 		yberr := err.(*feed.FeedError)
 		if yberr.Code == 404 {
-			f, err = controller.NewFeed(feedName)
+			f, err = feed.NewFeed(api.BasePath, feedName)
 
 			http.SetCookie(w, &http.Cookie{
 				Name:    "Secret",
@@ -133,13 +132,13 @@ func (a *ApiController) feedHandlerFunc(w http.ResponseWriter, r *http.Request) 
 	w.Write(j)
 }
 
-func (a *ApiController) feedPatchHandlerFunc(w http.ResponseWriter, r *http.Request) {
+func (api *ApiHandler) feedPatchHandlerFunc(w http.ResponseWriter, r *http.Request) {
 	slog.Default().WithGroup("http").Debug("Feed API Set PIN request", slog.Any("request", r))
 	secret, _ := utils.GetSecret(r)
 
 	feedName := strings.Split(r.URL.Path, "/")[3]
 
-	f, err := a.FeedController.GetFeed(feedName, secret)
+	f, err := feed.GetFeed(api.BasePath, feedName, secret)
 
 	if err != nil {
 		yberr := err.(*feed.FeedError)
@@ -156,14 +155,14 @@ func (a *ApiController) feedPatchHandlerFunc(w http.ResponseWriter, r *http.Requ
 	f.SetPIN(string(pin))
 }
 
-func (a *ApiController) feedItemHandlerFunc(w http.ResponseWriter, r *http.Request) {
+func (api *ApiHandler) feedItemHandlerFunc(w http.ResponseWriter, r *http.Request) {
 	slog.Default().WithGroup("http").Debug("Item API GET request", slog.Any("request", r))
 
 	secret, _ := utils.GetSecret(r)
 
 	feedName := strings.Split(r.URL.Path, "/")[3]
 
-	f, err := a.FeedController.GetFeed(feedName, secret)
+	f, err := feed.GetFeed(api.BasePath, feedName, secret)
 
 	if err != nil {
 		yberr := err.(*feed.FeedError)
@@ -193,14 +192,14 @@ func (a *ApiController) feedItemHandlerFunc(w http.ResponseWriter, r *http.Reque
 	w.Write(content)
 }
 
-func (a *ApiController) feedPostHandlerFunc(w http.ResponseWriter, r *http.Request) {
+func (api *ApiHandler) feedPostHandlerFunc(w http.ResponseWriter, r *http.Request) {
 	slog.Default().WithGroup("http").Debug("Item API POST request", slog.Any("request", r))
 
 	secret, _ := utils.GetSecret(r)
 
 	feedName := strings.Split(r.URL.Path, "/")[3]
 
-	f, err := a.FeedController.GetFeed(feedName, secret)
+	f, err := feed.GetFeed(api.BasePath, feedName, secret)
 
 	if err != nil {
 		yberr := err.(*feed.FeedError)
@@ -222,14 +221,14 @@ func (a *ApiController) feedPostHandlerFunc(w http.ResponseWriter, r *http.Reque
 	w.Write([]byte("OK"))
 }
 
-func (a *ApiController) feedItemDeleteHandlerFunc(w http.ResponseWriter, r *http.Request) {
+func (api *ApiHandler) feedItemDeleteHandlerFunc(w http.ResponseWriter, r *http.Request) {
 	slog.Default().WithGroup("http").Debug("Item API DELETE request", slog.Any("request", r))
 
 	secret, _ := utils.GetSecret(r)
 
 	feedName := strings.Split(r.URL.Path, "/")[3]
 
-	f, err := a.FeedController.GetFeed(feedName, secret)
+	f, err := feed.GetFeed(api.BasePath, feedName, secret)
 
 	if err != nil {
 		yberr := err.(*feed.FeedError)
