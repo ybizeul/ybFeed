@@ -3,6 +3,7 @@ package handlers
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -26,28 +27,89 @@ func TestIndexHtml(t *testing.T) {
 	}
 }
 
+const testFeedName = "test"
+
+type APITestRequest struct {
+	method      string
+	feed        string
+	item        string
+	body        io.Reader
+	contentType string
+
+	cookieAuthType AuthType
+	queryAuthType  AuthType
+}
+type AuthType int
+
+const (
+	AuthTypeNone = iota
+	AuthTypeAuth
+	AuthTypeFail
+)
+
+func (t APITestRequest) performRequest() *http.Response {
+	const goodSecret = "b90e516e-b256-41ff-a84e-a9e8d5b6fe30"
+	const badSecret = "foo"
+
+	api := NewApiHandler(path.Join(baseDir, dataDir))
+
+	authQuery := ""
+	switch t.queryAuthType {
+	case AuthTypeAuth:
+		authQuery = "?secret=" + goodSecret
+	case AuthTypeFail:
+		authQuery = "?secret=" + badSecret
+	}
+
+	path := "/api/feed/"
+	if t.feed == "" {
+		path = path + testFeedName
+	} else {
+		path = path + t.feed
+	}
+
+	if t.item != "" {
+		path = path + "/" + url.QueryEscape(t.item)
+	}
+
+	req := httptest.NewRequest(t.method, path+authQuery, t.body)
+
+	switch t.cookieAuthType {
+	case AuthTypeAuth:
+		req.AddCookie(&http.Cookie{Name: "Secret", Value: goodSecret})
+	case AuthTypeFail:
+		req.AddCookie(&http.Cookie{Name: "Secret", Value: badSecret})
+	}
+
+	if t.contentType != "" {
+		req.Header.Add("Content-type", t.contentType)
+	}
+	w := httptest.NewRecorder()
+
+	api.ApiHandleFunc(w, req)
+
+	return w.Result()
+}
+
 func TestCreateFeed(t *testing.T) {
 	const feedName = "6ff1146b683086b8f59f550189a8f91f"
 
 	t.Cleanup(func() {
 		os.RemoveAll(path.Join(baseDir, dataDir, feedName))
 	})
-	api := NewApiHandler(path.Join(baseDir, dataDir))
 
-	req := httptest.NewRequest(http.MethodGet, "/api/feed/"+feedName, nil)
-
-	w := httptest.NewRecorder()
-
-	api.ApiHandleFunc(w, req)
-
-	res := w.Result()
+	res := APITestRequest{
+		method: http.MethodGet,
+		feed:   feedName,
+		body:   nil,
+	}.performRequest()
 
 	if res.StatusCode != 200 {
 		t.Errorf("Expect code 200 but got %d", res.StatusCode)
 	}
 
 	// Read cookie
-	cookies := w.Result().Cookies()
+	cookies := res.Cookies()
 	found := false
 	fmt.Println(cookies)
 	for _, c := range cookies {
@@ -60,16 +122,10 @@ func TestCreateFeed(t *testing.T) {
 }
 
 func TestGetFeedNoCredentials(t *testing.T) {
-	const feedName = "test"
-	api := NewApiHandler(path.Join(baseDir, dataDir))
-
-	req := httptest.NewRequest(http.MethodGet, "/api/feed/"+feedName, nil)
-
-	w := httptest.NewRecorder()
-
-	api.ApiHandleFunc(w, req)
-
-	res := w.Result()
+	res := APITestRequest{
+		method: http.MethodGet,
+		body:   nil,
+	}.performRequest()
 
 	if res.StatusCode != 401 {
 		spew.Dump(res)
@@ -78,17 +134,11 @@ func TestGetFeedNoCredentials(t *testing.T) {
 }
 
 func TestGetFeedBadCookie(t *testing.T) {
-	const feedName = "test"
-	const secret = "foo"
-	api := NewApiHandler(path.Join(baseDir, dataDir))
-
-	req := httptest.NewRequest(http.MethodGet, "/api/feed/"+feedName, nil)
-	req.AddCookie(&http.Cookie{Name: "Secret", Value: secret})
-	w := httptest.NewRecorder()
-
-	api.ApiHandleFunc(w, req)
-
-	res := w.Result()
+	res := APITestRequest{
+		method:         http.MethodGet,
+		body:           nil,
+		cookieAuthType: AuthTypeFail,
+	}.performRequest()
 
 	if res.StatusCode != 401 {
 		t.Errorf("Expect code 401 but got %d", res.StatusCode)
@@ -96,34 +146,25 @@ func TestGetFeedBadCookie(t *testing.T) {
 }
 
 func TestGetFeedCookieAuth(t *testing.T) {
-	const feedName = "test"
-	const secret = "b90e516e-b256-41ff-a84e-a9e8d5b6fe30"
-	api := NewApiHandler(path.Join(baseDir, dataDir))
 
-	req := httptest.NewRequest(http.MethodGet, "/api/feed/"+feedName, nil)
-	req.AddCookie(&http.Cookie{Name: "Secret", Value: secret})
-	w := httptest.NewRecorder()
-
-	api.ApiHandleFunc(w, req)
-
-	res := w.Result()
+	res := APITestRequest{
+		method:         http.MethodGet,
+		feed:           testFeedName,
+		body:           nil,
+		cookieAuthType: AuthTypeAuth,
+	}.performRequest()
 
 	if res.StatusCode != 200 {
 		t.Errorf("Expect code 200 but got %d", res.StatusCode)
 	}
 }
 
-func TestGetFeedBadURLSecret(t *testing.T) {
-	const feedName = "test"
-	const secret = "foo"
-	api := NewApiHandler(path.Join(baseDir, dataDir))
-
-	req := httptest.NewRequest(http.MethodGet, "/api/feed/"+feedName+"?secret=foo", nil)
-	w := httptest.NewRecorder()
-
-	api.ApiHandleFunc(w, req)
-
-	res := w.Result()
+func TestGetFeedBadQuerySecret(t *testing.T) {
+	res := APITestRequest{
+		method:        http.MethodGet,
+		body:          nil,
+		queryAuthType: AuthTypeFail,
+	}.performRequest()
 
 	if res.StatusCode != 401 {
 		t.Errorf("Expect code 401 but got %d", res.StatusCode)
@@ -131,16 +172,11 @@ func TestGetFeedBadURLSecret(t *testing.T) {
 }
 
 func TestGetFeedURLAuth(t *testing.T) {
-	const feedName = "test"
-	const secret = "b90e516e-b256-41ff-a84e-a9e8d5b6fe30"
-	api := NewApiHandler(path.Join(baseDir, dataDir))
-
-	req := httptest.NewRequest(http.MethodGet, "/api/feed/"+feedName+"?secret="+secret, nil)
-	w := httptest.NewRecorder()
-
-	api.ApiHandleFunc(w, req)
-
-	res := w.Result()
+	res := APITestRequest{
+		method:        http.MethodGet,
+		body:          nil,
+		queryAuthType: AuthTypeAuth,
+	}.performRequest()
 
 	if res.StatusCode != 200 {
 		t.Errorf("Expect code 200 but got %d", res.StatusCode)
@@ -148,18 +184,13 @@ func TestGetFeedURLAuth(t *testing.T) {
 }
 
 func TestGetFeedItemNoCredentials(t *testing.T) {
-	const feedName = "test"
-	const secret = "b90e516e-b256-41ff-a84e-a9e8d5b6fe30"
 	const item = "Pasted Image 1.png"
 
-	api := NewApiHandler(path.Join(baseDir, dataDir))
-
-	req := httptest.NewRequest(http.MethodGet, "/api/feed/"+feedName+"/"+url.QueryEscape(item), nil)
-	w := httptest.NewRecorder()
-
-	api.ApiHandleFunc(w, req)
-
-	res := w.Result()
+	res := APITestRequest{
+		method: http.MethodGet,
+		item:   item,
+		body:   nil,
+	}.performRequest()
 
 	if res.StatusCode != 401 {
 		t.Errorf("Expect code 401 but got %d", res.StatusCode)
@@ -167,39 +198,59 @@ func TestGetFeedItemNoCredentials(t *testing.T) {
 }
 
 func TestGetFeedItem(t *testing.T) {
-	const feedName = "test"
-	const secret = "b90e516e-b256-41ff-a84e-a9e8d5b6fe30"
 	const item = "Pasted Image 1.png"
 
-	api := NewApiHandler(path.Join(baseDir, dataDir))
-
-	req := httptest.NewRequest(http.MethodGet, "/api/feed/"+feedName+"/"+url.QueryEscape(item), nil)
-	req.AddCookie(&http.Cookie{Name: "Secret", Value: secret})
-	w := httptest.NewRecorder()
-
-	api.ApiHandleFunc(w, req)
-
-	res := w.Result()
+	res := APITestRequest{
+		method:         http.MethodGet,
+		item:           item,
+		body:           nil,
+		cookieAuthType: AuthTypeAuth,
+	}.performRequest()
 
 	if res.StatusCode != 200 {
 		t.Errorf("Expect code 200 but got %d", res.StatusCode)
 	}
 }
 
+func TestGetFeedItemNonExistentFeed(t *testing.T) {
+	const item = "Pasted Image 1.png"
+
+	res := APITestRequest{
+		method: http.MethodGet,
+		feed:   "foo",
+		item:   item,
+	}.performRequest()
+
+	if res.StatusCode != 404 {
+		t.Errorf("Expect code 404 but got %d", res.StatusCode)
+	}
+}
+
+func TestGetFeedItemNonExistent(t *testing.T) {
+	res := APITestRequest{
+		method:         http.MethodGet,
+		item:           "foo",
+		cookieAuthType: AuthTypeAuth,
+	}.performRequest()
+
+	if res.StatusCode != 404 {
+		b, err := io.ReadAll(res.Body)
+		if err != nil {
+			t.Errorf("Expect code 400 but got %d (%s)", res.StatusCode, err.Error())
+		}
+		t.Errorf("Expect code 404 but got %d (%s)", res.StatusCode, string(b))
+	}
+}
+
 func TestSetPinNoCredentials(t *testing.T) {
-	const feedName = "test"
-	const secret = "b90e516e-b256-41ff-a84e-a9e8d5b6fe30"
 	const pin = "1234"
 
-	api := NewApiHandler(path.Join(baseDir, dataDir))
 	buf := bytes.NewBuffer([]byte(pin))
-	req := httptest.NewRequest(http.MethodPatch, "/api/feed/"+feedName, buf)
 
-	w := httptest.NewRecorder()
-
-	api.ApiHandleFunc(w, req)
-
-	res := w.Result()
+	res := APITestRequest{
+		method: http.MethodPatch,
+		body:   buf,
+	}.performRequest()
 
 	if res.StatusCode != 401 {
 		t.Errorf("Expect code 401 but got %d", res.StatusCode)
@@ -207,26 +258,20 @@ func TestSetPinNoCredentials(t *testing.T) {
 }
 
 func TestSetPin(t *testing.T) {
-
-	const feedName = "test"
-	const secret = "b90e516e-b256-41ff-a84e-a9e8d5b6fe30"
-	const pin = "1234"
-	pinPath := path.Join(baseDir, dataDir, feedName, "pin")
-
+	pinPath := path.Join(baseDir, dataDir, testFeedName, "pin")
 	t.Cleanup(func() {
 		os.Remove(pinPath)
 	})
 
-	api := NewApiHandler(path.Join(baseDir, dataDir))
+	const pin = "1234"
+
 	buf := bytes.NewBuffer([]byte(pin))
-	req := httptest.NewRequest(http.MethodPatch, "/api/feed/"+feedName, buf)
 
-	req.AddCookie(&http.Cookie{Name: "Secret", Value: secret})
-	w := httptest.NewRecorder()
-
-	api.ApiHandleFunc(w, req)
-
-	res := w.Result()
+	res := APITestRequest{
+		method:         http.MethodPatch,
+		body:           buf,
+		cookieAuthType: AuthTypeAuth,
+	}.performRequest()
 
 	if res.StatusCode != 200 {
 		t.Errorf("Expect code 200 but got %d", res.StatusCode)
@@ -244,36 +289,50 @@ func TestSetPin(t *testing.T) {
 	}
 }
 
-func TestAddAndRemoveContent(t *testing.T) {
+func TestSetBadPin(t *testing.T) {
+	pinPath := path.Join(baseDir, dataDir, testFeedName, "pin")
+	t.Cleanup(func() {
+		os.Remove(pinPath)
+	})
 
-	const feedName = "test"
-	const secret = "b90e516e-b256-41ff-a84e-a9e8d5b6fe30"
-	filePath := path.Join(baseDir, dataDir, feedName, "Pasted Image 1.png")
-	newFilePath := path.Join(baseDir, dataDir, feedName, "Pasted Image 2.png")
+	const pin = "123"
+
+	buf := bytes.NewBuffer([]byte(pin))
+
+	res := APITestRequest{
+		method:         http.MethodPatch,
+		body:           buf,
+		cookieAuthType: AuthTypeAuth,
+	}.performRequest()
+
+	if res.StatusCode != 400 {
+		t.Errorf("Expect code 400 but got %d", res.StatusCode)
+	}
+}
+
+func TestAddAndRemoveContent(t *testing.T) {
+	filePath := path.Join(baseDir, dataDir, testFeedName, "Pasted Image 1.png")
+	newFilePath := path.Join(baseDir, dataDir, testFeedName, "Pasted Image 2.png")
 
 	t.Cleanup(func() {
 		os.Remove(newFilePath)
 	})
 
-	api := NewApiHandler(path.Join(baseDir, dataDir))
 	reader, err := os.Open(filePath)
 
-	if err != nil {
-		t.Error(err.Error())
-	}
-
-	req := httptest.NewRequest(http.MethodPost, "/api/feed/"+feedName, reader)
-
-	req.AddCookie(&http.Cookie{Name: "Secret", Value: secret})
-	req.Header.Add("Content-type", "image/png")
-	w := httptest.NewRecorder()
-
-	api.ApiHandleFunc(w, req)
-
-	res := w.Result()
+	res := APITestRequest{
+		method:         http.MethodPost,
+		body:           reader,
+		cookieAuthType: AuthTypeAuth,
+		contentType:    "image/png",
+	}.performRequest()
 
 	if res.StatusCode != 200 {
-		t.Errorf("Expect code 200 but got %d", res.StatusCode)
+		b, err := io.ReadAll(res.Body)
+		if err != nil {
+			t.Error(err.Error())
+		}
+		t.Errorf("Expect code 200 but got %d (%s)", res.StatusCode, string(b))
 	}
 
 	_, err = os.Stat(newFilePath)
@@ -282,15 +341,11 @@ func TestAddAndRemoveContent(t *testing.T) {
 	}
 
 	// Delete request
-	req = httptest.NewRequest(http.MethodDelete, "/api/feed/"+feedName+"/"+url.QueryEscape("Pasted Image 2.png"), nil)
-
-	req.AddCookie(&http.Cookie{Name: "Secret", Value: secret})
-	req.Header.Add("Content-type", "image/png")
-	w = httptest.NewRecorder()
-
-	api.ApiHandleFunc(w, req)
-
-	res = w.Result()
+	res = APITestRequest{
+		method:         http.MethodDelete,
+		item:           "Pasted Image 2.png",
+		cookieAuthType: AuthTypeAuth,
+	}.performRequest()
 
 	if res.StatusCode != 200 {
 		t.Errorf("Expect code 200 but got %d", res.StatusCode)
@@ -299,5 +354,68 @@ func TestAddAndRemoveContent(t *testing.T) {
 	_, err = os.Stat(newFilePath)
 	if err == nil {
 		t.Error("Expected file to be delete and it isn't")
+	}
+}
+
+func TestAddContentWrongContentType(t *testing.T) {
+	res := APITestRequest{
+		method:         http.MethodPost,
+		cookieAuthType: AuthTypeAuth,
+		contentType:    "foo/bar",
+	}.performRequest()
+
+	if res.StatusCode != 400 {
+		b, err := io.ReadAll(res.Body)
+		if err != nil {
+			t.Errorf("Expect code 400 but got %d (%s)", res.StatusCode, err.Error())
+		}
+		t.Errorf("Expect code 400 but got %d (%s)", res.StatusCode, string(b))
+	}
+}
+
+func TestAddContentNonExistentFeed(t *testing.T) {
+	res := APITestRequest{
+		method:      http.MethodPost,
+		feed:        "foo",
+		contentType: "foo/bar",
+	}.performRequest()
+
+	if res.StatusCode != 404 {
+		b, err := io.ReadAll(res.Body)
+		if err != nil {
+			t.Errorf("Expect code 400 but got %d (%s)", res.StatusCode, err.Error())
+		}
+		t.Errorf("Expect code 400 but got %d (%s)", res.StatusCode, string(b))
+	}
+}
+func TestRemoveNonExistentContent(t *testing.T) {
+	res := APITestRequest{
+		method:         http.MethodDelete,
+		cookieAuthType: AuthTypeAuth,
+		item:           "foo",
+	}.performRequest()
+
+	if res.StatusCode != 404 {
+		b, err := io.ReadAll(res.Body)
+		if err != nil {
+			t.Errorf("Expect code 404 but got %d (%s)", res.StatusCode, err.Error())
+		}
+		t.Errorf("Expect code 404 but got %d (%s)", res.StatusCode, string(b))
+	}
+}
+
+func TestRemoveItemNonExistentFeed(t *testing.T) {
+	res := APITestRequest{
+		method: http.MethodDelete,
+		feed:   "foo",
+		item:   "foo",
+	}.performRequest()
+
+	if res.StatusCode != 404 {
+		b, err := io.ReadAll(res.Body)
+		if err != nil {
+			t.Errorf("Expect code 404 but got %d (%s)", res.StatusCode, err.Error())
+		}
+		t.Errorf("Expect code 404 but got %d (%s)", res.StatusCode, string(b))
 	}
 }
