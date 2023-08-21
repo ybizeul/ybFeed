@@ -3,10 +3,10 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
-	"html"
 	"io"
 	"io/fs"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -152,6 +152,12 @@ func (api *ApiHandler) feedPatchHandlerFunc(w http.ResponseWriter, r *http.Reque
 		w.Write([]byte(err.Error()))
 		return
 	}
+
+	if len(pin) != 4 {
+		w.WriteHeader(500)
+		w.Write([]byte("Malformed PIN"))
+		return
+	}
 	f.SetPIN(string(pin))
 }
 
@@ -177,7 +183,13 @@ func (api *ApiHandler) feedItemHandlerFunc(w http.ResponseWriter, r *http.Reques
 		}
 	}
 
-	feedItem := html.UnescapeString(strings.Split(r.URL.Path, "/")[4])
+	fileNameElement := strings.Split(r.URL.Path, "/")[4]
+	feedItem, err := url.QueryUnescape(fileNameElement)
+
+	if err != nil {
+		w.WriteHeader(500)
+		w.Write([]byte(fmt.Sprintf("Unable to parse file name '%s'", fileNameElement)))
+	}
 
 	content, err := f.GetItem(feedItem)
 
@@ -216,7 +228,13 @@ func (api *ApiHandler) feedPostHandlerFunc(w http.ResponseWriter, r *http.Reques
 
 	contentType := r.Header.Get("Content-type")
 
-	f.AddItem(contentType, r.Body)
+	err = f.AddItem(contentType, r.Body)
+
+	if err != nil {
+		w.WriteHeader(500)
+		w.Write([]byte(err.Error()))
+		return
+	}
 
 	w.Write([]byte("OK"))
 }
@@ -243,8 +261,12 @@ func (api *ApiHandler) feedItemDeleteHandlerFunc(w http.ResponseWriter, r *http.
 		}
 	}
 
-	item := strings.Split(r.URL.Path, "/")[4]
-
+	item, err := url.QueryUnescape(strings.Split(r.URL.Path, "/")[4])
+	if err != nil {
+		w.WriteHeader(500)
+		w.Write([]byte("Unable to unescape query string"))
+		return
+	}
 	err = f.RemoveItem(item)
 	w.Write([]byte("Item Removed"))
 }

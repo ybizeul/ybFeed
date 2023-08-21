@@ -207,11 +207,12 @@ func (feed *Feed) GetItem(item string) ([]byte, error) {
 	// Read item content
 	slog.Info("Getting Item", slog.String("feed", feed.Name), slog.String("name", item))
 	var content []byte
-	content, err := os.ReadFile(path.Join(feed.path, item))
+	filePath := path.Join(feed.path, item)
+	content, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, &FeedError{
 			Code:    500,
-			Message: "Unable to open file for read",
+			Message: fmt.Sprintf("Unable to open file '%s' for read", filePath),
 		}
 	}
 	return content, nil
@@ -245,6 +246,13 @@ func (feed *Feed) AddItem(contentType string, f io.ReadCloser) error {
 		return &FeedError{
 			Code:    500,
 			Message: "Unable to read stream",
+		}
+	}
+
+	if len(content) == 0 {
+		return &FeedError{
+			Code:    500,
+			Message: "Content is empty",
 		}
 	}
 
@@ -293,7 +301,6 @@ func (feed *Feed) RemoveItem(item string) error {
 	return nil
 }
 func (feed *Feed) SetPIN(pin string) error {
-
 	pinPath := path.Join(feed.path, "pin")
 
 	err := os.WriteFile(pinPath, []byte(pin), 0600)
