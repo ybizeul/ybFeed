@@ -210,6 +210,12 @@ func (feed *Feed) GetItem(item string) ([]byte, error) {
 	filePath := path.Join(feed.path, item)
 	content, err := os.ReadFile(filePath)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, &FeedError{
+				Code:    404,
+				Message: fmt.Sprintf("File does not exists (%s)", filePath),
+			}
+		}
 		return nil, &FeedError{
 			Code:    500,
 			Message: fmt.Sprintf("Unable to open file '%s' for read", filePath),
@@ -236,7 +242,7 @@ func (feed *Feed) AddItem(contentType string, f io.ReadCloser) error {
 
 	if len(ext) == 0 {
 		return &FeedError{
-			Code:    500,
+			Code:    400,
 			Message: "Content-type not accepted",
 		}
 	}
@@ -292,9 +298,15 @@ func (feed *Feed) RemoveItem(item string) error {
 
 	err := os.Remove(itemPath)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return &FeedError{
+				Code:    404,
+				Message: err.Error(),
+			}
+		}
 		return &FeedError{
 			Code:    500,
-			Message: "Unable to delete file",
+			Message: err.Error(),
 		}
 	}
 	slog.Info("Removed Item", slog.String("name", item), slog.String("feed", feed.Name))

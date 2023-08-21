@@ -154,7 +154,7 @@ func (api *ApiHandler) feedPatchHandlerFunc(w http.ResponseWriter, r *http.Reque
 	}
 
 	if len(pin) != 4 {
-		w.WriteHeader(500)
+		w.WriteHeader(400)
 		w.Write([]byte("Malformed PIN"))
 		return
 	}
@@ -173,7 +173,7 @@ func (api *ApiHandler) feedItemHandlerFunc(w http.ResponseWriter, r *http.Reques
 	if err != nil {
 		yberr := err.(*feed.FeedError)
 		if yberr.Code == 404 {
-			w.WriteHeader(401)
+			w.WriteHeader(404)
 			w.Write([]byte("No such feed"))
 			return
 		} else if yberr.Code == 401 {
@@ -195,11 +195,9 @@ func (api *ApiHandler) feedItemHandlerFunc(w http.ResponseWriter, r *http.Reques
 
 	if err != nil {
 		yberr := err.(*feed.FeedError)
-		if yberr.Code == 500 {
-			w.WriteHeader(500)
-			w.Write([]byte(yberr.Error()))
-			return
-		}
+		w.WriteHeader(yberr.Code)
+		w.Write([]byte(yberr.Error()))
+		return
 	}
 	w.Write(content)
 }
@@ -215,15 +213,9 @@ func (api *ApiHandler) feedPostHandlerFunc(w http.ResponseWriter, r *http.Reques
 
 	if err != nil {
 		yberr := err.(*feed.FeedError)
-		if yberr.Code == 404 {
-			w.WriteHeader(401)
-			w.Write([]byte("No such feed"))
-			return
-		} else if yberr.Code == 401 {
-			w.WriteHeader(401)
-			w.Write([]byte(err.Error()))
-			return
-		}
+		w.WriteHeader(yberr.Code)
+		w.Write([]byte(yberr.Message))
+		return
 	}
 
 	contentType := r.Header.Get("Content-type")
@@ -231,8 +223,9 @@ func (api *ApiHandler) feedPostHandlerFunc(w http.ResponseWriter, r *http.Reques
 	err = f.AddItem(contentType, r.Body)
 
 	if err != nil {
-		w.WriteHeader(500)
-		w.Write([]byte(err.Error()))
+		yberr := err.(*feed.FeedError)
+		w.WriteHeader(yberr.Code)
+		w.Write([]byte(yberr.Error()))
 		return
 	}
 
@@ -250,15 +243,9 @@ func (api *ApiHandler) feedItemDeleteHandlerFunc(w http.ResponseWriter, r *http.
 
 	if err != nil {
 		yberr := err.(*feed.FeedError)
-		if yberr.Code == 404 {
-			w.WriteHeader(401)
-			w.Write([]byte("No such feed"))
-			return
-		} else if yberr.Code == 401 {
-			w.WriteHeader(401)
-			w.Write([]byte("Access denied"))
-			return
-		}
+		w.WriteHeader(yberr.Code)
+		w.Write([]byte(yberr.Message))
+		return
 	}
 
 	item, err := url.QueryUnescape(strings.Split(r.URL.Path, "/")[4])
@@ -268,5 +255,11 @@ func (api *ApiHandler) feedItemDeleteHandlerFunc(w http.ResponseWriter, r *http.
 		return
 	}
 	err = f.RemoveItem(item)
+	if err != nil {
+		yberr := err.(*feed.FeedError)
+		w.WriteHeader(yberr.Code)
+		w.Write([]byte(yberr.Error()))
+		return
+	}
 	w.Write([]byte("Item Removed"))
 }
