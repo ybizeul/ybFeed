@@ -39,3 +39,9 @@ jobs:
           distribution: goreleaser
           version: latest
           args: release --clean
+
+      # Build docker image
+      - uses: ko-build/setup-ko@v0.6
+      - run: ko build -B --platform all --sbom none --tags "[`git describe`]" ./cmd/ybfeed
+        env:
+          KO_DOCKER_REPO: ghcr.io/ybizeul
