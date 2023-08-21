@@ -1,7 +1,9 @@
 FROM node AS node
-WORKDIR /app/web
-ADD web/ui /app/web/ui
-RUN cd /app/web/ui/; npm install; npm run build
+WORKDIR /app/web/ui
+ADD web/ui/package.json web/ui/package-lock.json ./
+RUN npm install;
+ADD web/ui/ .
+RUN npm run build
 
 FROM golang AS golang
 WORKDIR /app
