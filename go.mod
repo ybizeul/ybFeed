@@ -3,6 +3,7 @@ module github.com/ybizeul/ybfeed
 go 1.21
 
 require (
+	github.com/davecgh/go-spew v1.1.1
 	github.com/google/uuid v1.3.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/urfave/cli/v2 v2.25.7
