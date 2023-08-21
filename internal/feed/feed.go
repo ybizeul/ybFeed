@@ -79,7 +79,7 @@ func GetFeed(basePath string, feedName string, secret string) (*Feed, error) {
 	}
 
 	if secret == "" {
-		code := 500
+		code := 401
 		feedLog.Error("No secret was provided", slog.Int("return", code))
 		return nil, &FeedError{
 			Code:    code,
