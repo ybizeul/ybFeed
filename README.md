@@ -29,7 +29,7 @@ browser.
 
 ### Screenshot
 
-![Screenshot](screenshot.png)
+![Screenshot](assets/screenshot.png)
 
 ### Caveats
 
