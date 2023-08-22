@@ -20,7 +20,7 @@ jobs:
 
       # Set version environment
       - name: Set VERSION
-        run: echo "VERSION=`git describe --tags`" >> $GITHUB_ENV
+        run: echo "VERSION=`echo $GITHUB_REF|IFS=\"/\" read foo foo version; echo $version`" >> $GITHUB_ENV
 
       # Build web ui
       - name: Use Node.js 20.x
