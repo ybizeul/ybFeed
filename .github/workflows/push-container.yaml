@@ -20,8 +20,10 @@ jobs:
       # Set version environment
       - name: Set VERSION
         run: |
-          git describe
-          echo "YBFEED_VERSION=`git describe --tags`" >> $GITHUB_ENV
+          git fetch -a
+          latest_tag=$(git describe --tags `git rev-list --tags --max-count=1`)
+          echo $LATEST_TAG
+          echo "YBFEED_VERSION=$LATEST_TAG" >> $GITHUB_ENV
 
       # Build web ui
       - name: Use Node.js 20.x
