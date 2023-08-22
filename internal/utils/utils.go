@@ -26,3 +26,8 @@ func GetSecret(r *http.Request) (string, bool) {
 
 	return secret, fromURL
 }
+
+func CloseWithCodeAndMessage(w http.ResponseWriter, code int, message string) {
+	w.WriteHeader(code)
+	w.Write([]byte(message))
+}

@@ -107,9 +107,8 @@ func (api *ApiHandler) feedHandlerFunc(w http.ResponseWriter, r *http.Request) {
 				Path:    fmt.Sprintf("/api/feed/%s", feedName),
 				Expires: time.Now().Add(time.Hour * 24 * 365 * 10),
 			})
-		} else if yberr.Code == 401 {
-			w.WriteHeader(401)
-			w.Write([]byte("Access denied"))
+		} else {
+			utils.CloseWithCodeAndMessage(w, yberr.Code, yberr.Error())
 			return
 		}
 	}
@@ -125,8 +124,7 @@ func (api *ApiHandler) feedHandlerFunc(w http.ResponseWriter, r *http.Request) {
 
 	j, err := json.Marshal(f)
 	if err != nil {
-		w.WriteHeader(500)
-		w.Write([]byte(err.Error()))
+		utils.CloseWithCodeAndMessage(w, 500, err.Error())
 		return
 	}
 	w.Write(j)
@@ -142,8 +140,7 @@ func (api *ApiHandler) feedPatchHandlerFunc(w http.ResponseWriter, r *http.Reque
 
 	if err != nil {
 		yberr := err.(*feed.FeedError)
-		w.WriteHeader(401)
-		w.Write([]byte(yberr.Error()))
+		utils.CloseWithCodeAndMessage(w, yberr.Code, yberr.Error())
 		return
 	}
 	pin, err := io.ReadAll(r.Body)
@@ -154,8 +151,7 @@ func (api *ApiHandler) feedPatchHandlerFunc(w http.ResponseWriter, r *http.Reque
 	}
 
 	if len(pin) != 4 {
-		w.WriteHeader(400)
-		w.Write([]byte("Malformed PIN"))
+		utils.CloseWithCodeAndMessage(w, 400, "Malformed PIN")
 		return
 	}
 	f.SetPIN(string(pin))
@@ -172,15 +168,8 @@ func (api *ApiHandler) feedItemHandlerFunc(w http.ResponseWriter, r *http.Reques
 
 	if err != nil {
 		yberr := err.(*feed.FeedError)
-		if yberr.Code == 404 {
-			w.WriteHeader(404)
-			w.Write([]byte("No such feed"))
-			return
-		} else if yberr.Code == 401 {
-			w.WriteHeader(401)
-			w.Write([]byte("Access denied"))
-			return
-		}
+		utils.CloseWithCodeAndMessage(w, yberr.Code, yberr.Error())
+		return
 	}
 
 	fileNameElement := strings.Split(r.URL.Path, "/")[4]
@@ -195,8 +184,7 @@ func (api *ApiHandler) feedItemHandlerFunc(w http.ResponseWriter, r *http.Reques
 
 	if err != nil {
 		yberr := err.(*feed.FeedError)
-		w.WriteHeader(yberr.Code)
-		w.Write([]byte(yberr.Error()))
+		utils.CloseWithCodeAndMessage(w, yberr.Code, yberr.Error())
 		return
 	}
 	w.Write(content)
@@ -213,8 +201,7 @@ func (api *ApiHandler) feedPostHandlerFunc(w http.ResponseWriter, r *http.Reques
 
 	if err != nil {
 		yberr := err.(*feed.FeedError)
-		w.WriteHeader(yberr.Code)
-		w.Write([]byte(yberr.Message))
+		utils.CloseWithCodeAndMessage(w, yberr.Code, yberr.Error())
 		return
 	}
 
@@ -224,8 +211,7 @@ func (api *ApiHandler) feedPostHandlerFunc(w http.ResponseWriter, r *http.Reques
 
 	if err != nil {
 		yberr := err.(*feed.FeedError)
-		w.WriteHeader(yberr.Code)
-		w.Write([]byte(yberr.Error()))
+		utils.CloseWithCodeAndMessage(w, yberr.Code, yberr.Error())
 		return
 	}
 
@@ -243,22 +229,19 @@ func (api *ApiHandler) feedItemDeleteHandlerFunc(w http.ResponseWriter, r *http.
 
 	if err != nil {
 		yberr := err.(*feed.FeedError)
-		w.WriteHeader(yberr.Code)
-		w.Write([]byte(yberr.Message))
+		utils.CloseWithCodeAndMessage(w, yberr.Code, yberr.Error())
 		return
 	}
 
 	item, err := url.QueryUnescape(strings.Split(r.URL.Path, "/")[4])
 	if err != nil {
-		w.WriteHeader(500)
-		w.Write([]byte("Unable to unescape query string"))
+		utils.CloseWithCodeAndMessage(w, 500, "Unable to unescape query string")
 		return
 	}
 	err = f.RemoveItem(item)
 	if err != nil {
 		yberr := err.(*feed.FeedError)
-		w.WriteHeader(yberr.Code)
-		w.Write([]byte(yberr.Error()))
+		utils.CloseWithCodeAndMessage(w, yberr.Code, yberr.Error())
 		return
 	}
 	w.Write([]byte("Item Removed"))

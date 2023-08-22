@@ -49,9 +49,17 @@ type FeedItem struct {
 
 func NewFeed(basePath string, feedName string) (*Feed, error) {
 	slog.Info("Creating new feed", slog.String("feed", feedName))
-	os.Mkdir(path.Join(basePath, feedName), 0700)
+	feedPath := path.Join(basePath, feedName)
+	_, err := os.Stat(feedPath)
+	if err == nil {
+		return nil, &FeedError{
+			Code:    400,
+			Message: "Feed already exists",
+		}
+	}
+	os.Mkdir(feedPath, 0700)
 	secret := uuid.NewString()
-	err := os.WriteFile(path.Join(basePath, feedName, "secret"), []byte(secret), 0600)
+	err = os.WriteFile(path.Join(basePath, feedName, "secret"), []byte(secret), 0600)
 	if err != nil {
 		log.Errorf("Unable towrite file %s", err.Error())
 		return nil, err
@@ -155,7 +163,7 @@ func GetFeed(basePath string, feedName string, secret string) (*Feed, error) {
 		}
 	}
 
-	feed := Feed{
+	result := Feed{
 		Name:   feedName,
 		Secret: secret,
 		path:   path.Join(basePath, feedName),
@@ -191,16 +199,16 @@ func GetFeed(basePath string, feedName string, secret string) (*Feed, error) {
 			Name: f.Name(),
 			Date: info.ModTime(),
 			Type: itemType,
-			Feed: &feed,
+			Feed: &result,
 		})
 	}
 	sort.Slice(items, func(i, j2 int) bool {
 		return items[i].Date.After(items[j2].Date)
 	})
 
-	feed.Items = items
+	result.Items = items
 
-	return &feed, nil
+	return &result, nil
 }
 
 func (feed *Feed) GetItem(item string) ([]byte, error) {
