@@ -13,6 +13,8 @@ jobs:
     steps:
       # Checkout code
       - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
       # Fetch tags
       - run: git fetch --force --tags
@@ -20,6 +22,7 @@ jobs:
       # Set version environment
       - name: Set VERSION
         run: |
+          git describe --tags
           git fetch -a
           LATEST_TAG=$(git describe --tags `git rev-list --tags --max-count=1`)
           echo $LATEST_TAG
