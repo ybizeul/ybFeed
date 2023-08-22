@@ -58,6 +58,7 @@ func RootHandlerFunc(w http.ResponseWriter, r *http.Request) {
 // Handle requests to /api
 type ApiHandler struct {
 	BasePath string
+	Version  string
 }
 
 func NewApiHandler(basePath string) *ApiHandler {
@@ -70,6 +71,9 @@ func NewApiHandler(basePath string) *ApiHandler {
 func (api *ApiHandler) ApiHandleFunc(w http.ResponseWriter, r *http.Request) {
 	p := strings.TrimSuffix(r.URL.Path, "/")
 	split := strings.Split(p, "/")
+
+	w.Header().Add("ybFeed-Version", api.Version)
+
 	if len(split) == 4 {
 		if r.Method == "GET" {
 			api.feedHandlerFunc(w, r)
@@ -84,6 +88,8 @@ func (api *ApiHandler) ApiHandleFunc(w http.ResponseWriter, r *http.Request) {
 		} else if r.Method == "DELETE" {
 			api.feedItemDeleteHandlerFunc(w, r)
 		}
+	} else {
+		utils.CloseWithCodeAndMessage(w, 400, "Malformed request")
 	}
 }
 

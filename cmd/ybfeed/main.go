@@ -71,7 +71,7 @@ func run() {
 	// Start HTTP Server
 	r := http.NewServeMux()
 
-	api := handlers.ApiHandler{BasePath: dataDir}
+	api := handlers.ApiHandler{BasePath: dataDir, Version: version}
 
 	r.HandleFunc("/api/", api.ApiHandleFunc)
 	r.HandleFunc("/", handlers.RootHandlerFunc)
