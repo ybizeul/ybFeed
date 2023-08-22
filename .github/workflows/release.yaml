@@ -18,6 +18,10 @@ jobs:
       # Fetch tags
       - run: git fetch --force --tags
 
+      # Set version environment
+      - name: Set VERSION
+        run: echo "VERSION=`git describe --tags`" >> $GITHUB_ENV
+
       # Build web ui
       - name: Use Node.js 20.x
         uses: actions/setup-node@v3
@@ -44,6 +48,6 @@ jobs:
 
       # Build docker image
       - uses: ko-build/setup-ko@v0.6
-      - run: GOFLAGS="-ldflags=-X=main.version=`git describe --tags`" ko build -B --platform all --sbom none --tags "`git describe`,latest" ./cmd/ybfeed
+      - run: GOFLAGS="-ldflags=-X=main.version=$(VERSION)" ko build -B --platform all --sbom none --tags "$VERSION,latest" ./cmd/ybfeed
         env:
           KO_DOCKER_REPO: ghcr.io/ybizeul
