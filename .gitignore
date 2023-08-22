@@ -1,5 +1,5 @@
 node_modules
-ui/build/
+web/build/
 /data/
 **/.DS_Store
 /ybFeed
