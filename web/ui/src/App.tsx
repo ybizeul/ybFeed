@@ -1,7 +1,7 @@
 import './App.css';
-import { Row, Col, Layout, ConfigProvider, theme } from 'antd';
+import { Row, Col, Layout, ConfigProvider, Space, theme } from 'antd';
 import { useEffect, useState, useCallback } from "react";
-import { Content } from 'antd/es/layout/layout';
+import { Content, Footer } from 'antd/es/layout/layout';
 
 import {
   createBrowserRouter,
@@ -26,6 +26,7 @@ const router = createBrowserRouter([
 
 const App: React.FC = () => {
   const [darkMode, setDarkMode] = useState(false);
+  const [version, setVersion] = useState("");
   const windowQuery = window.matchMedia("(prefers-color-scheme:dark)");
 
   const darkModeChange = useCallback((event: MediaQueryListEvent) => {
@@ -44,6 +45,15 @@ const App: React.FC = () => {
     // eslint-disable-line react-hooks/exhaustive-deps
   }, [windowQuery.matches]);
 
+  useEffect(() => {
+    fetch("/api")
+    .then(r => {
+      let v = r.headers.get("Ybfeed-Version")
+      if (v !== null) {
+        setVersion(v)
+      }
+    })
+  })
   return (
     <ConfigProvider
     theme={{
@@ -61,6 +71,11 @@ const App: React.FC = () => {
           <Col xs={1} lg={6}/>
         </Row>
       </Content>
+      <Footer>
+        <Space style={{fontSize: '0.8em', opacity: '0.4', width: '100%', justifyContent: 'center'}}>
+          ybFeed {version}
+        </Space>
+      </Footer>
     </Layout>
   </div>
   </ConfigProvider>
