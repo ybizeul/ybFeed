@@ -20,7 +20,7 @@ jobs:
       # Set version environment
       - name: Set VERSION
         run: |
-          git describe --tags
+          git describe
           echo "YBFEED_VERSION=`git describe --tags`" >> $GITHUB_ENV
 
       # Build web ui
