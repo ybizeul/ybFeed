@@ -14,6 +14,9 @@ jobs:
       # Checkout code
       - uses: actions/checkout@v3
 
+      # Fetch tags
+      - run: git fetch --force --tags
+      
       # Set version environment
       - name: Set VERSION
         run: |
