@@ -20,7 +20,7 @@ jobs:
 
       # Set version environment
       - name: Set VERSION
-        run: echo "VERSION=`echo $GITHUB_REF|IFS=\"/\" read foo foo version; echo $version`" >> $GITHUB_ENV
+        run: echo "YBFEED_VERSION=`echo $GITHUB_REF|cut -d / -f 3`" >> $GITHUB_ENV
 
       # Build web ui
       - name: Use Node.js 20.x
@@ -48,6 +48,6 @@ jobs:
 
       # Build docker image
       - uses: ko-build/setup-ko@v0.6
-      - run: GOFLAGS="-ldflags=-X=main.version=$VERSION" ko build -B --platform all --sbom none --tags "$VERSION,latest" ./cmd/ybfeed
+      - run: GOFLAGS="-ldflags=-X=main.version=$YBFEED_VERSION" ko build -B --platform all --sbom none --tags "$YBFEED_VERSION,latest" ./cmd/ybfeed
         env:
           KO_DOCKER_REPO: ghcr.io/ybizeul
