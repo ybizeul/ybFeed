@@ -1,3 +1,5 @@
+VERSION = $(shell git describe --tags)
+
 all: ui go push
 
 ui:
@@ -6,15 +8,17 @@ ui:
 	npm run build
 
 go:
+	GOFLAGS="-ldflags=-X=main.version=$(VERSION)" \
 	go build -o ybFeed cmd/ybfeed/*.go
 
 ui-run: ui run
 
 run:
+	GOFLAGS="-ldflags=-X=main.version=$(VERSION)" \
 	go run cmd/ybfeed/*.go
 
 push:
-	ko build -B -t `git describe --tags`
+	GOFLAGS="-ldflags=-X=main.version=$(VERSION)" ko build -B -t $(VERSION)
 
 clean:
 	rm -f ybFeed

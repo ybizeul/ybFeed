@@ -10,6 +10,7 @@ builds:
   - main: ./cmd/ybfeed
     env:
       - CGO_ENABLED=0
+      - GOFLAGS="-ldflags=-X=main.version=`git describe --tags`"
     goos:
       - linux
       - windows

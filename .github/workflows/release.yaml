@@ -44,6 +44,6 @@ jobs:
 
       # Build docker image
       - uses: ko-build/setup-ko@v0.6
-      - run: ko build -B --platform all --sbom none --tags "`git describe`,latest" ./cmd/ybfeed
+      - run: GOFLAGS="-ldflags=-X=main.version=`git describe --tags`" ko build -B --platform all --sbom none --tags "`git describe`,latest" ./cmd/ybfeed
         env:
           KO_DOCKER_REPO: ghcr.io/ybizeul
