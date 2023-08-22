@@ -17,8 +17,8 @@ run:
 	GOFLAGS="-ldflags=-X=main.version=$(VERSION)" \
 	go run cmd/ybfeed/*.go
 
-push:
-	GOFLAGS="-ldflags=-X=main.version=$(VERSION)" ko build -B -t $(VERSION)
+push: ui
+	GOFLAGS="-ldflags=-X=main.version=$(VERSION)" ko build -B -t latest ./cmd/ybfeed/
 
 clean:
 	rm -f ybFeed
