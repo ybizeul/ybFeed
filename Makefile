@@ -1,6 +1,6 @@
 VERSION = $(shell git describe --tags)
 
-all: ui go push
+all: ui go
 
 ui:
 	cd web/ui/; \
