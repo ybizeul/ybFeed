@@ -28,6 +28,7 @@ func GetSecret(r *http.Request) (string, bool) {
 }
 
 func CloseWithCodeAndMessage(w http.ResponseWriter, code int, message string) {
+	slog.Error(message, slog.Int("code", code))
 	w.WriteHeader(code)
 	w.Write([]byte(message))
 }
