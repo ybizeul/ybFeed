@@ -57,8 +57,9 @@ func RootHandlerFunc(w http.ResponseWriter, r *http.Request) {
 
 // Handle requests to /api
 type ApiHandler struct {
-	BasePath string
-	Version  string
+	BasePath    string
+	Version     string
+	MaxBodySize int
 }
 
 func NewApiHandler(basePath string) *ApiHandler {
@@ -213,7 +214,8 @@ func (api *ApiHandler) feedPostHandlerFunc(w http.ResponseWriter, r *http.Reques
 
 	contentType := r.Header.Get("Content-type")
 
-	err = f.AddItem(contentType, r.Body)
+	err = f.AddItem(contentType, http.MaxBytesReader(w, r.Body, int64(api.MaxBodySize)))
+	//err = f.AddItem(contentType, r.Body)
 
 	if err != nil {
 		yberr := err.(*feed.FeedError)

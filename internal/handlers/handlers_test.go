@@ -357,6 +357,25 @@ func TestAddAndRemoveContent(t *testing.T) {
 	}
 }
 
+func TestAddContentTooBig(t *testing.T) {
+	b := bytes.NewBuffer(make([]byte, 6*1024*1024))
+
+	res := APITestRequest{
+		method:         http.MethodPost,
+		body:           b,
+		cookieAuthType: AuthTypeAuth,
+		contentType:    "image/png",
+	}.performRequest()
+
+	if res.StatusCode != 413 {
+		b, err := io.ReadAll(res.Body)
+		if err != nil {
+			t.Errorf("Expect code 413 but got %d (%s)", res.StatusCode, err.Error())
+		}
+		t.Errorf("Expect code 413 but got %d (%s)", res.StatusCode, string(b))
+	}
+}
+
 func TestAddContentWrongContentType(t *testing.T) {
 	res := APITestRequest{
 		method:         http.MethodPost,

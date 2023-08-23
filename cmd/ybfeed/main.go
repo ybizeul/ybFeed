@@ -13,6 +13,7 @@ import (
 var HTTP_PORT int
 var DEBUG bool
 var dataDir string
+var maxBodySize int
 
 var logLevel slog.LevelVar
 
@@ -46,6 +47,14 @@ func main() {
 				Usage:       "Data directory path",
 				Destination: &dataDir,
 			},
+			&cli.IntFlag{
+				Name:        "max-upload-size",
+				Aliases:     []string{"m"},
+				Value:       5,
+				EnvVars:     []string{"YBF_MAX_UPLOAD_SIZE"},
+				Usage:       "Max upload size in MB",
+				Destination: &maxBodySize,
+			},
 		},
 		Action: func(cCtx *cli.Context) error {
 			logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: &logLevel}))
@@ -53,7 +62,7 @@ func main() {
 			if DEBUG {
 				logLevel.Set(slog.LevelDebug)
 			}
-			slog.Info("Debugging", slog.Bool("status", DEBUG))
+			slog.Debug("Running in DEBUG mode")
 			run()
 			return nil
 		},
@@ -71,12 +80,16 @@ func run() {
 	// Start HTTP Server
 	r := http.NewServeMux()
 
-	api := handlers.ApiHandler{BasePath: dataDir, Version: version}
+	api := handlers.ApiHandler{
+		BasePath:    dataDir,
+		Version:     version,
+		MaxBodySize: maxBodySize * 1024 * 1024,
+	}
 
 	r.HandleFunc("/api/", api.ApiHandleFunc)
 	r.HandleFunc("/", handlers.RootHandlerFunc)
 
-	slog.Info("ybFeed starting", slog.String("version", version), slog.String("data_dir", dataDir), slog.Int("port", HTTP_PORT))
+	slog.Info("ybFeed starting", slog.String("version", version), slog.String("data_dir", dataDir), slog.Int("port", HTTP_PORT), slog.Int("max-upload-size", maxBodySize))
 	err := http.ListenAndServe(fmt.Sprintf(":%d", HTTP_PORT), r)
 	if err != nil {
 		slog.Error("Unable to start HTTP server", slog.String("error", err.Error()))

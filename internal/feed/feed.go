@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"net/http"
 	"os"
 	"path"
 	"path/filepath"
@@ -257,6 +258,13 @@ func (feed *Feed) AddItem(contentType string, f io.ReadCloser) error {
 
 	content, err := io.ReadAll(f)
 	if err != nil {
+		_, ok := err.(*http.MaxBytesError)
+		if ok {
+			return &FeedError{
+				Code:    413,
+				Message: "Max body size exceeded",
+			}
+		}
 		return &FeedError{
 			Code:    500,
 			Message: "Unable to read stream",
