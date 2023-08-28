@@ -89,6 +89,9 @@ func (api *ApiHandler) ApiHandleFunc(w http.ResponseWriter, r *http.Request) {
 		} else if r.Method == "DELETE" {
 			api.feedItemDeleteHandlerFunc(w, r)
 		}
+	} else if len(split) == 2 {
+		w.WriteHeader(200)
+		return
 	} else {
 		utils.CloseWithCodeAndMessage(w, 400, "Malformed request")
 	}
