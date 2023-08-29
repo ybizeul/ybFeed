@@ -35,7 +35,7 @@ function YBHeading(props: FeedItemHeadingProps) {
         setDeleteModalOpen(true)
     }
     function doDeleteItem() {
-        fetch("/api/feed/"+item.feed+"/"+item.name,{
+        fetch("/api/feed/"+encodeURIComponent(item.feed)+"/"+encodeURIComponent(item.name),{
             method: "DELETE",
             credentials: "include"
             })
