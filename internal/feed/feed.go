@@ -5,6 +5,7 @@ import (
 	"io"
 	"io/fs"
 	"net/http"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -62,7 +63,7 @@ func NewFeed(basePath string, feedName string) (*Feed, error) {
 	secret := uuid.NewString()
 	err = os.WriteFile(path.Join(basePath, feedName, "secret"), []byte(secret), 0600)
 	if err != nil {
-		log.Errorf("Unable towrite file %s", err.Error())
+		log.Errorf("Unable to write file %s", err.Error())
 		return nil, err
 	}
 	return &Feed{
@@ -339,4 +340,16 @@ func (feed *Feed) SetPIN(pin string) error {
 		}
 	}
 	return nil
+}
+
+func FeedNameFromPath(path string) (*string, error) {
+	s := strings.Split(path, "/")
+	if len(s) < 4 {
+		return nil, fmt.Errorf("No feed in URL (not enough components)")
+	}
+	result, err := url.QueryUnescape(s[3])
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
 }

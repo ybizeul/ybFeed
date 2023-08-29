@@ -102,19 +102,26 @@ func (api *ApiHandler) feedHandlerFunc(w http.ResponseWriter, r *http.Request) {
 
 	secret, fromURL := utils.GetSecret(r)
 
-	feedName := strings.Split(r.URL.Path, "/")[3]
+	feedName, err := feed.FeedNameFromPath(r.URL.Path)
 
-	f, err := feed.GetFeed(api.BasePath, feedName, secret)
+	if err != nil {
+		utils.CloseWithCodeAndMessage(w, 500, "Unable to unescape feed name")
+	}
+
+	f, err := feed.GetFeed(api.BasePath, *feedName, secret)
 
 	if err != nil {
 		yberr := err.(*feed.FeedError)
 		if yberr.Code == 404 {
-			f, err = feed.NewFeed(api.BasePath, feedName)
-
+			f, err = feed.NewFeed(api.BasePath, *feedName)
+			if err != nil {
+				yberr := err.(*feed.FeedError)
+				utils.CloseWithCodeAndMessage(w, yberr.Code, yberr.Error())
+			}
 			http.SetCookie(w, &http.Cookie{
 				Name:    "Secret",
 				Value:   f.Secret,
-				Path:    fmt.Sprintf("/api/feed/%s", feedName),
+				Path:    fmt.Sprintf("/api/feed/%s", *feedName),
 				Expires: time.Now().Add(time.Hour * 24 * 365 * 10),
 			})
 		} else {
@@ -127,7 +134,7 @@ func (api *ApiHandler) feedHandlerFunc(w http.ResponseWriter, r *http.Request) {
 		http.SetCookie(w, &http.Cookie{
 			Name:    "Secret",
 			Value:   f.Secret,
-			Path:    fmt.Sprintf("/api/feed/%s", feedName),
+			Path:    fmt.Sprintf("/api/feed/%s", *feedName),
 			Expires: time.Now().Add(time.Hour * 24 * 365 * 10),
 		})
 	}
@@ -144,9 +151,9 @@ func (api *ApiHandler) feedPatchHandlerFunc(w http.ResponseWriter, r *http.Reque
 	slog.Default().WithGroup("http").Debug("Feed API Set PIN request", slog.Any("request", r))
 	secret, _ := utils.GetSecret(r)
 
-	feedName := strings.Split(r.URL.Path, "/")[3]
+	feedName, err := feed.FeedNameFromPath(r.URL.Path)
 
-	f, err := feed.GetFeed(api.BasePath, feedName, secret)
+	f, err := feed.GetFeed(api.BasePath, *feedName, secret)
 
 	if err != nil {
 		yberr := err.(*feed.FeedError)
@@ -172,9 +179,9 @@ func (api *ApiHandler) feedItemHandlerFunc(w http.ResponseWriter, r *http.Reques
 
 	secret, _ := utils.GetSecret(r)
 
-	feedName := strings.Split(r.URL.Path, "/")[3]
+	feedName, err := feed.FeedNameFromPath(r.URL.Path)
 
-	f, err := feed.GetFeed(api.BasePath, feedName, secret)
+	f, err := feed.GetFeed(api.BasePath, *feedName, secret)
 
 	if err != nil {
 		yberr := err.(*feed.FeedError)
@@ -205,9 +212,9 @@ func (api *ApiHandler) feedPostHandlerFunc(w http.ResponseWriter, r *http.Reques
 
 	secret, _ := utils.GetSecret(r)
 
-	feedName := strings.Split(r.URL.Path, "/")[3]
+	feedName, err := feed.FeedNameFromPath(r.URL.Path)
 
-	f, err := feed.GetFeed(api.BasePath, feedName, secret)
+	f, err := feed.GetFeed(api.BasePath, *feedName, secret)
 
 	if err != nil {
 		yberr := err.(*feed.FeedError)
@@ -234,9 +241,9 @@ func (api *ApiHandler) feedItemDeleteHandlerFunc(w http.ResponseWriter, r *http.
 
 	secret, _ := utils.GetSecret(r)
 
-	feedName := strings.Split(r.URL.Path, "/")[3]
+	feedName, err := feed.FeedNameFromPath(r.URL.Path)
 
-	f, err := feed.GetFeed(api.BasePath, feedName, secret)
+	f, err := feed.GetFeed(api.BasePath, *feedName, secret)
 
 	if err != nil {
 		yberr := err.(*feed.FeedError)

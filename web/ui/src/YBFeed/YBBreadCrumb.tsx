@@ -15,7 +15,7 @@ export function YBBreadCrumb() {
 
   if (p.length > 1 && p[1] !== "") {
     items.push({
-      title: window.location.pathname.split("/")[1],
+      title: decodeURIComponent(window.location.pathname.split("/")[1]),
     })
   }
   return (

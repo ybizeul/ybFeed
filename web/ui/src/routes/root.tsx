@@ -9,7 +9,7 @@ export default function Root() {
     const [goToPath,setGoToPath] = useState("")
     
     const handleFinish = (values: any) => {
-        setGoToPath("/" + feed)
+        setGoToPath("/" + encodeURIComponent(feed))
     }
 
     if (window.location.pathname !== "/") {
