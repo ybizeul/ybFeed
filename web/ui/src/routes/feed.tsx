@@ -44,7 +44,7 @@ export default function FeedComponent() {
     // Update feed is run every 2s or o, some events
     //
     function update() {
-        fetch("/api/feed/"+feed,{
+        fetch("/api/feed/"+encodeURIComponent(feed!),{
             credentials: "include"
           })
         .then(r => {

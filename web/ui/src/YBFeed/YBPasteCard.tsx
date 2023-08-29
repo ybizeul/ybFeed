@@ -39,7 +39,7 @@ export function YBPasteCard(props:PasteCardProps) {
 
         const requestHeaders: HeadersInit = new Headers();
         requestHeaders.set("Content-Type", type)
-        fetch("/api/feed/" + feed,{
+        fetch("/api/feed/" + encodeURIComponent(feed!),{
             method: "POST",
             body: data,
             headers: requestHeaders,
@@ -52,7 +52,7 @@ export function YBPasteCard(props:PasteCardProps) {
     const handleFinish = () => {
         const requestHeaders: HeadersInit = new Headers();
         requestHeaders.set("Content-Type", "text/plain")
-        fetch("/api/feed/" + feed,{
+        fetch("/api/feed/" + encodeURIComponent(feed!),{
             method: "POST",
             body: textFieldValue,
             headers: requestHeaders,

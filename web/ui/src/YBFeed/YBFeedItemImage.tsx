@@ -26,7 +26,7 @@ export function FeedItemImage(props:FeedItemProps) {
             img.onload = imageLoaded
 
         })
-        img.src = "/api/feed/"+feed+"/"+name
+        img.src = "/api/feed/"+encodeURIComponent(feed)+"/"+name
 
         let mime = 'image/png'
         navigator.clipboard.write([new ClipboardItem({[mime]:imageDataPromise})])
@@ -43,7 +43,7 @@ export function FeedItemImage(props:FeedItemProps) {
         <div className="itemContainer">
             <div className="itemImg">
                 <Image
-                src={"/api/feed/"+feed+"/"+name}
+                src={"/api/feed/"+encodeURIComponent(feed)+"/"+name}
                 preview={false}
                 />
                 {showCopyButton?

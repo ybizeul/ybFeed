@@ -15,7 +15,7 @@ export function FeedItemText(props:FeedItemProps) {
     }
 
     useEffect(() => {
-        fetch("/api/feed/"+feed+"/"+name,{
+        fetch("/api/feed/"+encodeURIComponent(feed)+"/"+name,{
             credentials: "include"
             })
         .then(r => {
