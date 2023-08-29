@@ -52,6 +52,7 @@ func (t APITestRequest) performRequest() *http.Response {
 	const badSecret = "foo"
 
 	api := NewApiHandler(path.Join(baseDir, dataDir))
+	api.MaxBodySize = 5 * 1024 * 1024
 
 	authQuery := ""
 	switch t.queryAuthType {
