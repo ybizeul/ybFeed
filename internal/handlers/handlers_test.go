@@ -64,9 +64,9 @@ func (t APITestRequest) performRequest() *http.Response {
 
 	path := "/api/feed/"
 	if t.feed == "" {
-		path = path + testFeedName
+		path = path + url.QueryEscape(testFeedName)
 	} else {
-		path = path + t.feed
+		path = path + url.QueryEscape(t.feed)
 	}
 
 	if t.item != "" {
@@ -93,7 +93,7 @@ func (t APITestRequest) performRequest() *http.Response {
 }
 
 func TestCreateFeed(t *testing.T) {
-	const feedName = "6ff1146b683086b8f59f550189a8f91f"
+	const feedName = "6ff1146b6830 #86b8f59f550189a8f91f"
 
 	t.Cleanup(func() {
 		os.RemoveAll(path.Join(baseDir, dataDir, feedName))
