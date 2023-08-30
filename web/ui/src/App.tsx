@@ -11,7 +11,7 @@ import {
 import React from 'react';
 
 import Root from "./routes/root";
-import FeedComponent from "./routes/feed";
+import { FeedComponent } from "./YBFeed";
 
 const router = createBrowserRouter([
   {

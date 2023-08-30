@@ -36,7 +36,7 @@ const (
 )
 
 type Feed struct {
-	Name   string
+	Name   string     `json:"name"`
 	Secret string     `json:"secret"`
 	Items  []FeedItem `json:"items"`
 

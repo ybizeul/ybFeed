@@ -16,7 +16,6 @@ export function YBPasteCard(props:PasteCardProps) {
     //
     
     const handleOnPaste = (event: React.ClipboardEvent) => {
-        console.log("test")
         const items = event.clipboardData.items
         var data, type
         setTextFieldValue("")

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { message } from 'antd'
 import { Button } from 'antd'
 import { MdContentCopy } from "react-icons/md";
-import { FeedItemProps } from './YBFeedItem'
+import { FeedItemProps } from './YBFeedItemComponent'
 
 export function FeedItemText(props:FeedItemProps) {
     const { item, showCopyButton } = props
@@ -15,7 +15,7 @@ export function FeedItemText(props:FeedItemProps) {
     }
 
     useEffect(() => {
-        fetch("/api/feed/"+encodeURIComponent(feed)+"/"+name,{
+        fetch("/api/feed/"+encodeURIComponent(feed.name)+"/"+name,{
             credentials: "include"
             })
         .then(r => {

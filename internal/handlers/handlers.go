@@ -117,6 +117,7 @@ func (api *ApiHandler) feedHandlerFunc(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				yberr := err.(*feed.FeedError)
 				utils.CloseWithCodeAndMessage(w, yberr.Code, yberr.Error())
+				return
 			}
 			http.SetCookie(w, &http.Cookie{
 				Name:    "Secret",

@@ -1,10 +1,9 @@
 import { Button, Image, message } from 'antd'
 import { MdContentCopy } from "react-icons/md";
-import { FeedItemProps } from './YBFeedItem'
+import { FeedItemProps } from './YBFeedItemComponent'
 
 export function FeedItemImage(props:FeedItemProps) {
     const { item, showCopyButton } = props
-    const {name, feed} = item
 
     const copyItem = () => {
         const img = document.createElement('img')
@@ -26,7 +25,7 @@ export function FeedItemImage(props:FeedItemProps) {
             img.onload = imageLoaded
 
         })
-        img.src = "/api/feed/"+encodeURIComponent(feed)+"/"+name
+        img.src = "/api/feed/"+encodeURIComponent(item.feed.name)+"/"+item.name
 
         let mime = 'image/png'
         navigator.clipboard.write([new ClipboardItem({[mime]:imageDataPromise})])
@@ -43,7 +42,7 @@ export function FeedItemImage(props:FeedItemProps) {
         <div className="itemContainer">
             <div className="itemImg">
                 <Image
-                src={"/api/feed/"+encodeURIComponent(feed)+"/"+name}
+                src={"/api/feed/"+encodeURIComponent(item.feed.name)+"/"+item.name}
                 preview={false}
                 />
                 {showCopyButton?

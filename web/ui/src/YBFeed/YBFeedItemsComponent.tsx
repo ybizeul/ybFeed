@@ -1,13 +1,12 @@
-import { YBFeedItem, FeedItem } from './YBFeedItem'
+import { FeedItem, FeedItemProps, YBFeedItem } from './'
 
 export interface FeedItemsProps {
     items: FeedItem[],
-    onUpdate?: (item: FeedItem) => void
+    onUpdate?: (item: FeedItemProps) => void
 }
 
 export function FeedItems(props: FeedItemsProps) {
     const { items, onUpdate } = props
-    
     return(
         <>
         {items.map((f:FeedItem) => 

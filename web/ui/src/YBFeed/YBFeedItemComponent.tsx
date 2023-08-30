@@ -7,35 +7,23 @@ import {
     DeleteOutlined,
   } from '@ant-design/icons';
 
-import { FeedItemText } from './YBFeedItemText'
-import { FeedItemImage } from './YBFeedItemImage'
-
-export interface FeedItem {
-    name: string,
-    date: string,
-    type: number,
-    feed: string
-}
-
-export interface FeedItemProps {
-    item: FeedItem,
-    showCopyButton?: boolean
-    onUpdate?: (item: FeedItem) => void
-}
+import { FeedItemText } from './YBFeedItemTextComponent'
+import { FeedItemImage } from './YBFeedItemImageComponent'
+import { FeedItem } from '.'
 
 export interface FeedItemHeadingProps {
     item: FeedItem,
 }
 function YBHeading(props: FeedItemHeadingProps) {
     const { item } = props
-    const { name, type } = props.item
+    const { name, type } = item
     const [deleteModalOpen,setDeleteModalOpen] = useState(false)
 
     function deleteItem() {
         setDeleteModalOpen(true)
     }
     function doDeleteItem() {
-        fetch("/api/feed/"+encodeURIComponent(item.feed)+"/"+encodeURIComponent(item.name),{
+        fetch("/api/feed/"+encodeURIComponent(item.feed.name)+"/"+encodeURIComponent(name),{
             method: "DELETE",
             credentials: "include"
             })
@@ -45,7 +33,7 @@ function YBHeading(props: FeedItemHeadingProps) {
     return (
         <div className='heading'>
         <Modal title="Delete" className="DeleteModal" open={deleteModalOpen} onOk={doDeleteItem} onCancel={() => setDeleteModalOpen(false)} >
-            <p>Do you really want to delete file "{item.name}"?</p>
+            <p>Do you really want to delete file "{name}"?</p>
         </Modal>
         {(type === 0)?
         <FileTextOutlined />
@@ -59,6 +47,12 @@ function YBHeading(props: FeedItemHeadingProps) {
         </Space>
         </div>
     )
+}
+
+export interface FeedItemProps {
+    item: FeedItem,
+    showCopyButton?: boolean
+    onUpdate?: (item: FeedItemProps) => void
 }
 
 export function YBFeedItem(props: FeedItemProps) {
