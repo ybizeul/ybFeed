@@ -17,13 +17,22 @@ export interface Feed {
     items: FeedItem[],
 }
 
+interface YBFeedError {
+    status: number
+}
+class YBFeedError extends Error {
+    constructor(status: number, message?:string) {
+        super(message);
+        this.status = status
+    }
+}
 export class FeedConnector {
     async GetFeed(feedName: string): Promise<Feed|null> {
-        const f = await fetch("/api/feed/"+encodeURIComponent(feedName),{
-            credentials: "include"
-        })
+        var f = await fetch("/api/feed/"+encodeURIComponent(feedName),{
+                credentials: "include"
+            })
         if (f.status !== 200) {
-            return null
+            throw new YBFeedError(f.status, f.statusText)
         }
         const j = await f.json()
         for (var i=0;i<j.items.length;i++) {

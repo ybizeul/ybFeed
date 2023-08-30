@@ -27,7 +27,7 @@ export function FeedComponent() {
     const [pinModalOpen,setPinModalOpen] = useState(false)
     const [authenticated,setAuthenticated] = useState<boolean|undefined>(undefined)
     const [updateGeneration,setUpdateGeneration] = useState(0)
-
+    const [fatal, setFatal] = useState(null)
     const connection = new FeedConnector()
     //
     // Creating links to feed
@@ -48,10 +48,9 @@ export function FeedComponent() {
         connection.GetFeed(feedParam)
         .then((f) => {
             if (f === null) {
-                setAuthenticated(false)
                 return
             }
-
+            setFatal(null)
             var do_update = false
 
             var found
@@ -101,6 +100,13 @@ export function FeedComponent() {
 
             setSecret(f.secret)
             setAuthenticated(true)
+        })
+        .catch(e => {
+            if (e.status === 401) {
+                setAuthenticated(false)
+            } else if (e.status === 500) {
+                setFatal(e.message)
+            }
         })
     }
 
@@ -193,78 +199,83 @@ export function FeedComponent() {
         :""}
 
         <YBBreadCrumb />
-        
-        {authenticated===true?
-        <>
-        <Modal title="Set Temporary PIN" className="PINModal" open={pinModalOpen} footer={null} onCancel={handlePinModalCancel} destroyOnClose={true}>
-            <div className="text-center">
-                Please choose a PIN, it wille expire after 2 minutes:
+        {!fatal?
+            <>
+            {authenticated===true?
+            <>
+            <Modal title="Set Temporary PIN" className="PINModal" open={pinModalOpen} footer={null} onCancel={handlePinModalCancel} destroyOnClose={true}>
+                <div className="text-center">
+                    Please choose a PIN, it wille expire after 2 minutes:
+                </div>
+                <Row justify='center'>
+                        <Col>
+                                    <Form
+                    action="/"
+                    onFinish={setPIN}
+                    >
+                                <Form.Item
+                                    name="PIN"
+                                    rules={[{ required: true, type: 'string', len: 4, pattern: RegExp("[0-9]{4}"), validateTrigger:"onBlur" }]}
+                                    validateTrigger="onBlur"
+                                    className='pin-field'
+                                >
+                                <Input size="large" width={4} type="password" maxLength={4} placeholder="1234" prefix={<NumberOutlined />} />
+                                </Form.Item>
+                            </Form>
+                        </Col>
+                    </Row>
+
+            </Modal>
+
+            <div className="pasteCard">
+                <YBPasteCard empty={feedItems.current.length === 0}/>
             </div>
+
+            <FeedItems items={feedItems.current} onUpdate={update} />
+            
+            </>
+            :""}
+
+            {authenticated===false?
+            <>
             <Row justify='center'>
-                    <Col>
-                                <Form
-                action="/"
-                onFinish={setPIN}
-                >
+                <Col>
+                    <div className="text-center">
+                        <p>It doesn't look like you are authorized to view this feed.</p>
+                        <p>Would you like to authenticate with a PIN?</p>
+                    </div>
+                </Col>
+            </Row>
+            <Row justify='center'>
+                <Col>
+                    <Form
+                            onFinish={sendPIN}
+                            className='form-container'
+                            >
                             <Form.Item
                                 name="PIN"
                                 rules={[{ required: true, type: 'string', len: 4, pattern: RegExp("[0-9]{4}"), validateTrigger:"onBlur" }]}
                                 validateTrigger="onBlur"
-                                className='pin-field'
-                            >
-                            <Input size="large" width={4} type="password" maxLength={4} placeholder="1234" prefix={<NumberOutlined />} />
+                                >
+                            <Input 
+                                className="pin-field"
+                                size="large" 
+                                width={3} 
+                                type="password" 
+                                maxLength={4} 
+                                placeholder="1234" 
+                                prefix={<NumberOutlined />} />
                             </Form.Item>
-                        </Form>
-                    </Col>
-                </Row>
-
-        </Modal>
-
-        <div className="pasteCard">
-            <YBPasteCard empty={feedItems.current.length === 0}/>
-        </div>
-
-        <FeedItems items={feedItems.current} onUpdate={update} />
-        
-        </>
-        :""}
-
-        {authenticated===false?
-        <>
-        <Row justify='center'>
-            <Col>
-                <div className="text-center">
-                    <p>It doesn't look like you are authorized to view this feed.</p>
-                    <p>Would you like to authenticate with a PIN?</p>
-                </div>
-            </Col>
-        </Row>
-        <Row justify='center'>
-            <Col>
-                <Form
-                        onFinish={sendPIN}
-                        className='form-container'
-                        >
-                        <Form.Item
-                            name="PIN"
-                            rules={[{ required: true, type: 'string', len: 4, pattern: RegExp("[0-9]{4}"), validateTrigger:"onBlur" }]}
-                            validateTrigger="onBlur"
-                            >
-                        <Input 
-                            className="pin-field"
-                            size="large" 
-                            width={3} 
-                            type="password" 
-                            maxLength={4} 
-                            placeholder="1234" 
-                            prefix={<NumberOutlined />} />
-                        </Form.Item>
-                </Form>
-            </Col>
-        </Row>
-        </>
-        :""
-        }
+                    </Form>
+                </Col>
+            </Row>
+            </>
+            :""
+            }
+            </>
+        :
+            <p>{fatal}</p>
+        }   
         </>
     )
 }
