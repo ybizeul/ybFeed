@@ -120,11 +120,20 @@ func GetFeed(basePath string, feedName string, secret string) (*Feed, error) {
 	} else {
 		stat, err := os.Stat(path.Join(feedPath, "pin"))
 		if err != nil {
-			code := 500
-			feedLog.Error("Unable to read PIN", slog.Int("return", code))
-			return nil, &FeedError{
-				Code:    code,
-				Message: err.Error(),
+			if os.IsNotExist(err) {
+				code := 401
+				feedLog.Error("No PIN configured", slog.Int("return", code))
+				return nil, &FeedError{
+					Code:    code,
+					Message: "No PIN configured",
+				}
+			} else {
+				code := 500
+				feedLog.Error("Unable to read PIN", slog.Int("return", code))
+				return nil, &FeedError{
+					Code:    code,
+					Message: err.Error(),
+				}
 			}
 		}
 
