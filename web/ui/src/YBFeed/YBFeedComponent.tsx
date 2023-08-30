@@ -112,19 +112,20 @@ export function FeedComponent() {
     useEffect(
         () => {
             const interval = window.setInterval(update,2000)
-
             const secret = searchParams.get("secret")
             if (secret) {
+                console.log("test")
                 connection.AuthenticateFeed(feedParam,secret)
-                .then(() => {
-                    setGoTo("/" + feedParam)
-                    update()
-                })
-                .catch((e) => {
-                    console.log(e)
-                    message.error(e.message)
-                    setAuthenticated(false)
-                })
+                    .then(() => {
+                        console.log("then")
+                        setGoTo("/" + feedParam)
+                        update()
+                    })
+                    .catch((e) => {
+                        console.log(e.message)
+                        message.error(e.message)
+                        setAuthenticated(false)
+                    })
             }
             else {
                 update()

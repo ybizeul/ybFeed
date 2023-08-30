@@ -31,26 +31,44 @@ export class FeedConnector {
         return "/api/feed/"+encodeURIComponent(feedName)
     }
     async GetFeed(feedName: string): Promise<Feed|null> { 
-        var f = await fetch(this.feedUrl(feedName),{
-                credentials: "include"
-            })
-        if (f.status !== 200) {
-            throw new YBFeedError(f.status, f.statusText)
-        }
-        const j = await f.json()
-        for (var i=0;i<j.items.length;i++) {
-            j.items[i].feed = j
-        }
-        return j
+        return new Promise((resolve, reject) => {
+            fetch(this.feedUrl(feedName),{
+                    credentials: "include"
+                })
+                .then((f) => {
+                    if (f.status !== 200) {
+                        f.text()
+                        .then(text => {
+                            reject(new YBFeedError(f.status, text))
+                        })
+                    }
+                    f.json()
+                    .then(j => {
+                        for (var i=0;i<j.items.length;i++) {
+                            j.items[i].feed = j
+                        }
+                        resolve(j)
+                    })
+                })
+            
+        })
     }
     async AuthenticateFeed(feedName: string, secret: string): Promise<boolean> {
-        var f = await fetch(this.feedUrl(feedName)+"?secret="+encodeURIComponent(secret),{
-            credentials: "include"
+        return new Promise((resolve, reject) => {
+            fetch(this.feedUrl(feedName)+"?secret="+encodeURIComponent(secret),{
+                credentials: "include"
+            })
+            .then(f => {
+                if (f.status !== 200) {
+                    f.text()
+                    .then(text => {
+                        reject(new YBFeedError(f.status, text))
+                    })
+                } else {
+                    resolve(true)
+                }
+            })
         })
-        if (f.status !== 200) {
-            throw new YBFeedError(f.status, f.statusText)
-        }
-        return true
     }
     async SetPIN(feedName: string, pin: string): Promise<boolean> {
         return fetch(this.feedUrl(feedName),{
@@ -60,7 +78,9 @@ export class FeedConnector {
           })
           .then((f) => {
             if (f.status !== 200) {
-                throw new YBFeedError(f.status, f.statusText)
+                f.text().then((b) => {
+                    throw new YBFeedError(f.status, b)
+                })
             }
             return true
           })
