@@ -1,9 +1,7 @@
 import { useEffect, useState, useRef } from "react"
 
-import { useParams } from 'react-router';
-import { Navigate } from 'react-router';
-
-import queryString from 'query-string';
+import { useParams, useSearchParams } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 
 import { Button, Form, Input, Dropdown, Space, Modal, Row, Col } from 'antd';
 import { message } from 'antd';
@@ -20,7 +18,8 @@ import {
 
 
 export function FeedComponent() {
-    const feedParam = useParams().feed;
+    const feedParam: string = useParams().feed!
+    const [searchParams] = useSearchParams()
     const [goTo,setGoTo] = useState<string|undefined>(undefined)
     const feedItems = useRef<FeedItem[]>([])
     const [secret,setSecret] = useState<string|null>(null)
@@ -113,16 +112,18 @@ export function FeedComponent() {
     useEffect(
         () => {
             const interval = window.setInterval(update,2000)
-            let query = queryString.parse(window.location.search)
 
-            if ("secret" in query) {         
-                fetch("/api/feed/"+encodeURIComponent(feedParam!)+"?secret="+query.secret,{
-                    credentials: "include"
-                  })
-                  .then(() => {
+            const secret = searchParams.get("secret")
+            if (secret) {
+                connection.AuthenticateFeed(feedParam,secret)
+                .then(() => {
                     setGoTo("/" + feedParam)
                     update()
-                  })
+                })
+                .catch((e) => {
+                    message.error(e.message)
+                    setAuthenticated(false)
+                })
             }
             else {
                 update()
@@ -163,23 +164,24 @@ export function FeedComponent() {
         onClick: handleMenuClick,
       };
       const setPIN = (e: any) => {
-        fetch("/api/feed/"+encodeURIComponent(feedParam!),{
-            method: "PATCH",
-            credentials: "include",
-            body: e.PIN
-          })
-          .then(() => {
+        connection.SetPIN(feedParam,e.PIN)
+        .then((r) => {
             message.info("PIN set")
             setPinModalOpen(false)
-          })
+        })
+        .catch((e) => {
+            message.error(e.message)
+            setPinModalOpen(false)
+        })
       }
       const sendPIN = (e: any) => {
-        fetch("/api/feed/"+encodeURIComponent(feedParam!)+"?secret=" + e.PIN,{
-            credentials: "include"
-          })
-          .then(() => {
+        connection.AuthenticateFeed(feedParam,e.PIN)
+        .then((r) => {
             update()
-          })
+        })
+        .catch((e) => {
+            message.error(e.message)
+        })
       }
     
     return (
