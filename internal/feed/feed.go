@@ -116,6 +116,7 @@ func GetFeed(basePath string, feedName string, secret string) (*Feed, error) {
 				Message: "Authentication failed",
 			}
 		}
+		secret = string(feedSecret)
 	} else {
 		stat, err := os.Stat(path.Join(feedPath, "pin"))
 		if err != nil {
@@ -136,11 +137,9 @@ func GetFeed(basePath string, feedName string, secret string) (*Feed, error) {
 				Code:    code,
 				Message: "Authentication failed",
 			}
-		} else {
-
 		}
 
-		s, err := os.ReadFile(path.Join(feedPath, "secret"))
+		s, err := os.ReadFile(path.Join(feedPath, "pin"))
 
 		if err != nil {
 			code := 500
@@ -150,7 +149,14 @@ func GetFeed(basePath string, feedName string, secret string) (*Feed, error) {
 				Message: err.Error(),
 			}
 		}
-		secret = string(s)
+		if string(s) != secret {
+			code := 401
+			feedLog.Warn("PIN Incorrect", slog.Int("return", code))
+			return nil, &FeedError{
+				Code:    code,
+				Message: "Authentication failed",
+			}
+		}
 	}
 
 	var d []fs.DirEntry
