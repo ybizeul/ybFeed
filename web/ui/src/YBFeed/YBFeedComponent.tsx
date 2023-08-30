@@ -121,6 +121,7 @@ export function FeedComponent() {
                     update()
                 })
                 .catch((e) => {
+                    console.log(e)
                     message.error(e.message)
                     setAuthenticated(false)
                 })
