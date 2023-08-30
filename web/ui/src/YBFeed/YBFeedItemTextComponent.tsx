@@ -3,10 +3,10 @@ import { message } from 'antd'
 import { Button } from 'antd'
 import { MdContentCopy } from "react-icons/md";
 import { FeedItemProps } from './YBFeedItemComponent'
+import { FeedConnector } from '.';
 
 export function FeedItemText(props:FeedItemProps) {
     const { item, showCopyButton } = props
-    const { name, feed } = item
     const [textValue,setTextValue] = useState("")
 
     const copyItem = () => {
@@ -15,16 +15,11 @@ export function FeedItemText(props:FeedItemProps) {
     }
 
     useEffect(() => {
-        fetch("/api/feed/"+encodeURIComponent(feed.name)+"/"+name,{
-            credentials: "include"
-            })
-        .then(r => {
-            r.text()
-            .then(t => {
-                setTextValue(t)
-            })
-        })
-     
+        var connection = new FeedConnector()
+        connection.GetItem(item)
+        .then((text) => {
+            setTextValue(text)
+        })     
     })
 
     return(
