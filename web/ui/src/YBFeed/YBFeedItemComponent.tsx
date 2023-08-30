@@ -13,6 +13,7 @@ import { FeedItem } from '.'
 
 export interface FeedItemHeadingProps {
     item: FeedItem,
+    onDelete?: () => void
 }
 function YBHeading(props: FeedItemHeadingProps) {
     const { item } = props
@@ -27,7 +28,12 @@ function YBHeading(props: FeedItemHeadingProps) {
             method: "DELETE",
             credentials: "include"
             })
-            .then(() => setDeleteModalOpen(false))
+            .then(() => {
+                setDeleteModalOpen(false)
+                if (props.onDelete) {
+                    props.onDelete()
+                }
+            })
     }
 
     return (
@@ -53,6 +59,7 @@ export interface FeedItemProps {
     item: FeedItem,
     showCopyButton?: boolean
     onUpdate?: (item: FeedItemProps) => void
+    onDelete?: () => void
 }
 
 export function YBFeedItem(props: FeedItemProps) {
@@ -68,7 +75,7 @@ export function YBFeedItem(props: FeedItemProps) {
 
     return(
         <div className='item'>
-            <YBHeading item={item} />
+            <YBHeading item={item} onDelete={props.onDelete}/>
             {component}
         </div>
     )

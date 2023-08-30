@@ -4,6 +4,7 @@ import { useParams } from 'react-router-dom'
 
 interface PasteCardProps {
     empty?: boolean
+    onPaste: () => void
 }
 
 export function YBPasteCard(props:PasteCardProps) {
@@ -46,6 +47,7 @@ export function YBPasteCard(props:PasteCardProps) {
           })
           .then(() => {
             setTextFieldValue("")
+            props.onPaste()
           })
     }
     const handleFinish = () => {

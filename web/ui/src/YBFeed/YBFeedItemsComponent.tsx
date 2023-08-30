@@ -3,6 +3,7 @@ import { FeedItem, FeedItemProps, YBFeedItem } from './'
 export interface FeedItemsProps {
     items: FeedItem[],
     onUpdate?: (item: FeedItemProps) => void
+    onDelete?: () => void
 }
 
 export function FeedItems(props: FeedItemsProps) {
@@ -10,7 +11,7 @@ export function FeedItems(props: FeedItemsProps) {
     return(
         <>
         {items.map((f:FeedItem) => 
-            <YBFeedItem item={f} onUpdate={onUpdate} key={f.name}/>
+            <YBFeedItem item={f} onUpdate={onUpdate} onDelete={props.onDelete} key={f.name}/>
         )}
         </>
     )

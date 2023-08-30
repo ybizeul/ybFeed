@@ -203,6 +203,7 @@ export function FeedComponent() {
         :""}
 
         <YBBreadCrumb />
+
         {!fatal?
             <>
             {authenticated===true?
@@ -232,7 +233,7 @@ export function FeedComponent() {
             </Modal>
 
             <div className="pasteCard">
-                <YBPasteCard empty={feedItems.current.length === 0}/>
+                <YBPasteCard empty={feedItems.current.length === 0} onPaste={update}/>
             </div>
 
             <FeedItems items={feedItems.current} onUpdate={update} />
