@@ -12,9 +12,9 @@ export default function Root() {
         setGoToPath("/" + encodeURIComponent(feed))
     }
 
-    if (window.location.pathname !== "/") {
-        setGoToPath(window.location.pathname)
-    }
+    // if (window.location.pathname !== "/") {
+    //     setGoToPath(window.location.pathname)
+    // }
   
     return (
         <>
