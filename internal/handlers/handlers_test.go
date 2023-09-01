@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
+	"github.com/ybizeul/ybfeed/internal/feed"
 )
 
 const baseDir = "../../test/"
@@ -131,6 +132,17 @@ func TestGetFeedNoCredentials(t *testing.T) {
 	if res.StatusCode != 401 {
 		spew.Dump(res)
 		t.Errorf("Expect code 401 but got %d", res.StatusCode)
+	}
+	// Read cookie
+	cookies := res.Cookies()
+	found := false
+	fmt.Println(cookies)
+	for _, c := range cookies {
+		found = (c.Name == "Secret")
+	}
+
+	if found == true {
+		t.Errorf("Cookie has been set in reply")
 	}
 }
 
@@ -259,9 +271,14 @@ func TestSetPinNoCredentials(t *testing.T) {
 }
 
 func TestSetPin(t *testing.T) {
-	pinPath := path.Join(baseDir, dataDir, testFeedName, "pin")
 	t.Cleanup(func() {
-		os.Remove(pinPath)
+		c, _ := feed.FeedConfigForFeed(
+			&feed.Feed{
+				Path: path.Join(baseDir, dataDir, testFeedName),
+			},
+		)
+		c.PIN = nil
+		c.Write()
 	})
 
 	const pin = "1234"
@@ -278,12 +295,16 @@ func TestSetPin(t *testing.T) {
 		t.Errorf("Expect code 200 but got %d", res.StatusCode)
 	}
 
-	b, err := os.ReadFile(pinPath)
-	if err != nil {
-		t.Error(err.Error())
-	}
+	c, err := feed.FeedConfigForFeed(
+		&feed.Feed{
+			Path: path.Join(baseDir, dataDir, testFeedName),
+		},
+	)
 
-	pin_written := string(b)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	pin_written := c.PIN.PIN
 
 	if pin_written != pin {
 		t.Errorf("Expected PIN %s but got %s", pin, pin_written)
@@ -403,7 +424,7 @@ func TestAddContentNonExistentFeed(t *testing.T) {
 	if res.StatusCode != 404 {
 		b, err := io.ReadAll(res.Body)
 		if err != nil {
-			t.Errorf("Expect code 400 but got %d (%s)", res.StatusCode, err.Error())
+			t.Errorf("Expect code 404 but got %d (%s)", res.StatusCode, err.Error())
 		}
 		t.Errorf("Expect code 400 but got %d (%s)", res.StatusCode, string(b))
 	}

@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	log "github.com/sirupsen/logrus"
 	"golang.org/x/exp/slog"
 )
 
@@ -35,23 +34,33 @@ const (
 	Binary
 )
 
-type Feed struct {
-	Name   string     `json:"name"`
-	Secret string     `json:"secret"`
-	Items  []FeedItem `json:"items"`
-
-	path string
+// PublicFeed is a version of a feed that does not expose private informations
+// In this context, the feed secret is not a private information as it needs to
+// be transmitted as a cookie to the browser
+type PublicFeed struct {
+	Name   string           `json:"name"`
+	Items  []PublicFeedItem `json:"items"`
+	Secret string           `json:"secret"`
 }
-type FeedItem struct {
+
+// Feed is the internal representation of a Feed and contains all the
+// informations needed to perform its tasks
+type Feed struct {
+	Path   string
+	Config FeedConfig
+}
+
+type PublicFeedItem struct {
 	Name string       `json:"name"`
 	Date time.Time    `json:"date"`
 	Type FeedItemType `json:"type"`
-	Feed *Feed        `json:"-"`
+	Feed *PublicFeed  `json:"-"`
 }
 
 func NewFeed(basePath string, feedName string) (*Feed, error) {
 	slog.Info("Creating new feed", slog.String("feed", feedName))
 	feedPath := path.Join(basePath, feedName)
+
 	_, err := os.Stat(feedPath)
 	if err == nil {
 		return nil, &FeedError{
@@ -59,28 +68,32 @@ func NewFeed(basePath string, feedName string) (*Feed, error) {
 			Message: "Feed already exists",
 		}
 	}
-	os.Mkdir(feedPath, 0700)
-	secret := uuid.NewString()
-	err = os.WriteFile(path.Join(basePath, feedName, "secret"), []byte(secret), 0600)
+
+	err = os.Mkdir(feedPath, 0700)
 	if err != nil {
-		log.Errorf("Unable to write file %s", err.Error())
+		slog.Error("Error creating feed directory", slog.String("feed", feedName), slog.String("directory", feedPath))
 		return nil, err
 	}
-	return &Feed{
-		Name:   feedName,
-		Secret: secret,
-		Items:  []FeedItem{},
-		path:   path.Join(basePath, feedName),
-	}, nil
+
+	feed := Feed{
+		Path: feedPath,
+		Config: FeedConfig{
+			Secret: uuid.NewString(),
+		},
+	}
+
+	feed.Config.feed = &feed
+
+	err = feed.Config.Write()
+
+	if err != nil {
+		slog.Error("Unable to write config %s", err.Error())
+		return nil, err
+	}
+
+	return &feed, nil
 }
-
-func GetFeed(basePath string, feedName string, secret string) (*Feed, error) {
-	feedPath := path.Join(basePath, feedName)
-
-	feedLog := slog.Default().With(slog.String("feed", feedName))
-
-	feedLog.Debug("Getting feed", slog.Int("secret_len", len(secret)))
-
+func GetFeed(feedPath string) (*Feed, error) {
 	if _, err := os.Stat(feedPath); os.IsNotExist(err) {
 		return nil, &FeedError{
 			Code:    404,
@@ -88,88 +101,42 @@ func GetFeed(basePath string, feedName string, secret string) (*Feed, error) {
 		}
 	}
 
-	if secret == "" {
-		code := 401
-		feedLog.Error("No secret was provided", slog.Int("return", code))
+	result := &Feed{Path: feedPath}
+
+	c, err := FeedConfigForFeed(result)
+	if err != nil {
 		return nil, &FeedError{
-			Code:    code,
-			Message: "Unauthorized",
+			Code:    404,
+			Message: "Feed does not exists",
 		}
 	}
+	c.feed = result
 
-	if len(secret) != 4 {
-		feedSecret, err := os.ReadFile(path.Join(feedPath, "secret"))
-		code := 500
-		if err != nil {
-			feedLog.Error("Unable to read secret", slog.Int("return", code))
-			return nil, &FeedError{
-				Code:    code,
-				Message: err.Error(),
-			}
-		}
+	result.Config = *c
 
-		if string(feedSecret) != secret {
-			code := 401
-			feedLog.Error("Invalid secret", slog.Int("return", code))
-			return nil, &FeedError{
-				Code:    code,
-				Message: "Authentication failed",
-			}
-		}
-		secret = string(feedSecret)
-	} else {
-		stat, err := os.Stat(path.Join(feedPath, "pin"))
-		if err != nil {
-			if os.IsNotExist(err) {
-				code := 401
-				feedLog.Error("No PIN configured", slog.Int("return", code))
-				return nil, &FeedError{
-					Code:    code,
-					Message: "No PIN configured",
-				}
-			} else {
-				code := 500
-				feedLog.Error("Unable to read PIN", slog.Int("return", code))
-				return nil, &FeedError{
-					Code:    code,
-					Message: err.Error(),
-				}
-			}
-		}
+	return result, nil
+}
 
-		maxTime := stat.ModTime().Add(2 * time.Minute)
-		if maxTime.Before(time.Now()) {
-			code := 401
-			feedLog.Warn("PIN expired", slog.Int("return", code))
-			os.Remove(path.Join(feedPath, "pin"))
-			return nil, &FeedError{
-				Code:    code,
-				Message: "Authentication failed",
-			}
-		}
+func GetPublicFeed(basePath string, feedName string, secret string) (*PublicFeed, error) {
+	feedPath := path.Join(basePath, feedName)
 
-		s, err := os.ReadFile(path.Join(feedPath, "pin"))
+	feedLog := slog.Default().With(slog.String("feed", feedName))
 
-		if err != nil {
-			code := 500
-			feedLog.Error("Unable to read secret", slog.Int("return", code))
-			return nil, &FeedError{
-				Code:    code,
-				Message: err.Error(),
-			}
-		}
-		if string(s) != secret {
-			code := 401
-			feedLog.Warn("PIN Incorrect", slog.Int("return", code))
-			return nil, &FeedError{
-				Code:    code,
-				Message: "Authentication failed",
-			}
-		}
+	feedLog.Debug("Getting feed", slog.Int("secret_len", len(secret)))
+
+	f, err := GetFeed(feedPath)
+
+	err = f.IsSecretValid(secret)
+
+	if err != nil {
+		return nil, err
 	}
 
+	publicFeed := &PublicFeed{
+		Name:   feedName,
+		Secret: f.Config.Secret,
+	}
 	var d []fs.DirEntry
-	var err error
 	if d, err = os.ReadDir(feedPath); err != nil {
 		code := 500
 		feedLog.Error("Unable to feed content", slog.Int("return", code))
@@ -180,15 +147,9 @@ func GetFeed(basePath string, feedName string, secret string) (*Feed, error) {
 		}
 	}
 
-	result := Feed{
-		Name:   feedName,
-		Secret: secret,
-		path:   path.Join(basePath, feedName),
-	}
-
-	items := []FeedItem{}
+	items := []PublicFeedItem{}
 	for _, f := range d {
-		if f.Name() == "secret" || f.Name() == "pin" {
+		if f.Name() == "secret" || f.Name() == "pin" || f.Name() == "config.json" {
 			continue
 		}
 		info, err := f.Info()
@@ -212,27 +173,29 @@ func GetFeed(basePath string, feedName string, secret string) (*Feed, error) {
 		} else {
 			itemType = Binary
 		}
-		items = append(items, FeedItem{
+		items = append(items, PublicFeedItem{
 			Name: f.Name(),
 			Date: info.ModTime(),
 			Type: itemType,
-			Feed: &result,
+			Feed: publicFeed,
 		})
 	}
 	sort.Slice(items, func(i, j2 int) bool {
 		return items[i].Date.After(items[j2].Date)
 	})
 
-	result.Items = items
+	publicFeed.Items = items
 
-	return &result, nil
+	return publicFeed, nil
 }
-
+func (feed *Feed) Name() string {
+	return path.Base(feed.Path)
+}
 func (feed *Feed) GetItem(item string) ([]byte, error) {
 	// Read item content
-	slog.Info("Getting Item", slog.String("feed", feed.Name), slog.String("name", item))
+	slog.Info("Getting Item", slog.String("feed", feed.Name()), slog.String("name", item))
 	var content []byte
-	filePath := path.Join(feed.path, item)
+	filePath := path.Join(feed.Path, item)
 	content, err := os.ReadFile(filePath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -248,8 +211,38 @@ func (feed *Feed) GetItem(item string) ([]byte, error) {
 	}
 	return content, nil
 }
+
+func (feed *Feed) IsSecretValid(secret string) error {
+	if secret == "" {
+		code := 401
+		slog.Error("No secret was provided", slog.Int("return", code))
+		return &FeedError{
+			Code:    code,
+			Message: "Unauthorized",
+		}
+	}
+
+	if len(secret) != 4 {
+		if feed.Config.Secret != secret {
+			code := 401
+			slog.Error("Invalid secret", slog.Int("return", code))
+			return &FeedError{
+				Code:    code,
+				Message: "Authentication failed",
+			}
+		}
+	} else {
+		err := feed.Config.PIN.IsValid(secret)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (feed *Feed) AddItem(contentType string, f io.ReadCloser) error {
-	slog.Debug("Adding Item", slog.String("feed", feed.Name), slog.String("content-type", contentType))
+	slog.Debug("Adding Item", slog.String("feed", feed.Name()), slog.String("content-type", contentType))
 	fileExtensions := map[string]string{
 		"image/png":  "png",
 		"image/jpeg": "jpg",
@@ -298,7 +291,7 @@ func (feed *Feed) AddItem(contentType string, f io.ReadCloser) error {
 	var filename string
 	for {
 		filename = fmt.Sprintf("%s %d", template, fileIndex)
-		matches, err := filepath.Glob(path.Join(feed.path, filename) + ".*")
+		matches, err := filepath.Glob(path.Join(feed.Path, filename) + ".*")
 		if err != nil {
 			return &FeedError{
 				Code:    500,
@@ -311,7 +304,7 @@ func (feed *Feed) AddItem(contentType string, f io.ReadCloser) error {
 		fileIndex++
 	}
 
-	err = os.WriteFile(path.Join(feed.path, filename+"."+ext), content, 0600)
+	err = os.WriteFile(path.Join(feed.Path, filename+"."+ext), content, 0600)
 	if err != nil {
 		return &FeedError{
 			Code:    500,
@@ -319,14 +312,14 @@ func (feed *Feed) AddItem(contentType string, f io.ReadCloser) error {
 		}
 	}
 
-	slog.Info("Added Item", slog.String("name", filename+"."+ext), slog.String("feed", feed.Name), slog.String("content-type", contentType))
+	slog.Info("Added Item", slog.String("name", filename+"."+ext), slog.String("feed", feed.Path), slog.String("content-type", contentType))
 
 	return nil
 }
 
 func (feed *Feed) RemoveItem(item string) error {
-	slog.Debug("Remove Item", slog.String("name", item), slog.String("feed", feed.Name))
-	itemPath := path.Join(feed.path, item)
+	slog.Debug("Remove Item", slog.String("name", item), slog.String("feed", feed.Path))
+	itemPath := path.Join(feed.Path, item)
 
 	err := os.Remove(itemPath)
 	if err != nil {
@@ -341,18 +334,14 @@ func (feed *Feed) RemoveItem(item string) error {
 			Message: err.Error(),
 		}
 	}
-	slog.Info("Removed Item", slog.String("name", item), slog.String("feed", feed.Name))
+	slog.Info("Removed Item", slog.String("name", item), slog.String("feed", feed.Name()))
 	return nil
 }
-func (feed *Feed) SetPIN(pin string) error {
-	pinPath := path.Join(feed.path, "pin")
 
-	err := os.WriteFile(pinPath, []byte(pin), 0600)
+func (feed *Feed) SetPIN(pin string) error {
+	err := feed.Config.SetPIN(pin)
 	if err != nil {
-		return &FeedError{
-			Code:    500,
-			Message: "Unable to write PIN",
-		}
+		return err
 	}
 	return nil
 }

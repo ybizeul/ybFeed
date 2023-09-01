@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"strings"
 	"time"
 
@@ -105,42 +106,54 @@ func (api *ApiHandler) feedHandlerFunc(w http.ResponseWriter, r *http.Request) {
 	feedName, err := feed.FeedNameFromPath(r.URL.Path)
 
 	if err != nil {
-		utils.CloseWithCodeAndMessage(w, 500, "Unable to unescape feed name")
+		utils.CloseWithCodeAndMessage(w, 500, "Unable to obtain feed name")
 	}
 
-	f, err := feed.GetFeed(api.BasePath, *feedName, secret)
+	p, err := feed.GetFeed(path.Join(api.BasePath, *feedName))
 
 	if err != nil {
 		yberr := err.(*feed.FeedError)
 		if yberr.Code == 404 {
-			f, err = feed.NewFeed(api.BasePath, *feedName)
+			p, err = feed.NewFeed(api.BasePath, *feedName)
+			secret = p.Config.Secret
 			if err != nil {
 				yberr := err.(*feed.FeedError)
 				utils.CloseWithCodeAndMessage(w, yberr.Code, yberr.Error())
 				return
 			}
-			http.SetCookie(w, &http.Cookie{
-				Name:    "Secret",
-				Value:   f.Secret,
-				Path:    fmt.Sprintf("/api/feed/%s", *feedName),
-				Expires: time.Now().Add(time.Hour * 24 * 365 * 10),
-			})
 		} else {
 			utils.CloseWithCodeAndMessage(w, yberr.Code, yberr.Error())
 			return
 		}
 	}
 
+	result, err := feed.GetPublicFeed(api.BasePath, *feedName, p.Config.Secret)
+
+	err = p.IsSecretValid(secret)
+
+	if err != nil {
+		yberr := err.(*feed.FeedError)
+		utils.CloseWithCodeAndMessage(w, yberr.Code, yberr.Error())
+		return
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:    "Secret",
+		Value:   result.Secret,
+		Path:    fmt.Sprintf("/api/feed/%s", *feedName),
+		Expires: time.Now().Add(time.Hour * 24 * 365 * 10),
+	})
+
 	if fromURL {
 		http.SetCookie(w, &http.Cookie{
 			Name:    "Secret",
-			Value:   f.Secret,
+			Value:   result.Secret,
 			Path:    fmt.Sprintf("/api/feed/%s", *feedName),
 			Expires: time.Now().Add(time.Hour * 24 * 365 * 10),
 		})
 	}
 
-	j, err := json.Marshal(f)
+	j, err := json.Marshal(result)
 	if err != nil {
 		utils.CloseWithCodeAndMessage(w, 500, err.Error())
 		return
@@ -154,7 +167,9 @@ func (api *ApiHandler) feedPatchHandlerFunc(w http.ResponseWriter, r *http.Reque
 
 	feedName, err := feed.FeedNameFromPath(r.URL.Path)
 
-	f, err := feed.GetFeed(api.BasePath, *feedName, secret)
+	f, err := feed.GetFeed(path.Join(api.BasePath, *feedName))
+
+	err = f.IsSecretValid(secret)
 
 	if err != nil {
 		yberr := err.(*feed.FeedError)
@@ -182,7 +197,15 @@ func (api *ApiHandler) feedItemHandlerFunc(w http.ResponseWriter, r *http.Reques
 
 	feedName, err := feed.FeedNameFromPath(r.URL.Path)
 
-	f, err := feed.GetFeed(api.BasePath, *feedName, secret)
+	f, err := feed.GetFeed(path.Join(api.BasePath, *feedName))
+
+	if err != nil {
+		yberr := err.(*feed.FeedError)
+		utils.CloseWithCodeAndMessage(w, yberr.Code, yberr.Error())
+		return
+	}
+
+	err = f.IsSecretValid(secret)
 
 	if err != nil {
 		yberr := err.(*feed.FeedError)
@@ -215,7 +238,15 @@ func (api *ApiHandler) feedPostHandlerFunc(w http.ResponseWriter, r *http.Reques
 
 	feedName, err := feed.FeedNameFromPath(r.URL.Path)
 
-	f, err := feed.GetFeed(api.BasePath, *feedName, secret)
+	f, err := feed.GetFeed(path.Join(api.BasePath, *feedName))
+
+	if err != nil {
+		yberr := err.(*feed.FeedError)
+		utils.CloseWithCodeAndMessage(w, yberr.Code, yberr.Error())
+		return
+	}
+
+	err = f.IsSecretValid(secret)
 
 	if err != nil {
 		yberr := err.(*feed.FeedError)
@@ -244,7 +275,15 @@ func (api *ApiHandler) feedItemDeleteHandlerFunc(w http.ResponseWriter, r *http.
 
 	feedName, err := feed.FeedNameFromPath(r.URL.Path)
 
-	f, err := feed.GetFeed(api.BasePath, *feedName, secret)
+	f, err := feed.GetFeed(path.Join(api.BasePath, *feedName))
+
+	if err != nil {
+		yberr := err.(*feed.FeedError)
+		utils.CloseWithCodeAndMessage(w, yberr.Code, yberr.Error())
+		return
+	}
+
+	err = f.IsSecretValid(secret)
 
 	if err != nil {
 		yberr := err.(*feed.FeedError)
