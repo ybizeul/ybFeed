@@ -4,3 +4,4 @@ web/ui/build/
 **/.DS_Store
 /ybFeed
 dist/
+.vscode
