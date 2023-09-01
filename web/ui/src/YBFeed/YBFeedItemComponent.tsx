@@ -9,7 +9,7 @@ import {
 
 import { FeedItemText } from './YBFeedItemTextComponent'
 import { FeedItemImage } from './YBFeedItemImageComponent'
-import { FeedItem } from '.'
+import { FeedConnector, FeedItem } from '.'
 
 export interface FeedItemHeadingProps {
     item: FeedItem,
@@ -24,16 +24,14 @@ function YBHeading(props: FeedItemHeadingProps) {
         setDeleteModalOpen(true)
     }
     function doDeleteItem() {
-        fetch("/api/feed/"+encodeURIComponent(item.feed.name)+"/"+encodeURIComponent(name),{
-            method: "DELETE",
-            credentials: "include"
-            })
-            .then(() => {
-                setDeleteModalOpen(false)
-                if (props.onDelete) {
-                    props.onDelete()
-                }
-            })
+        var connection = new FeedConnector()
+        connection.DeleteItem(item)
+        .then(() => {
+            setDeleteModalOpen(false)
+            if (props.onDelete) {
+                props.onDelete()
+            }
+        })
     }
 
     return (
