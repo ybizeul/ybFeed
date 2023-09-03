@@ -257,7 +257,7 @@ export function FeedComponent() {
                 <YBPasteCard empty={feedItems.current.length === 0} onPaste={update}/>
             </div>
 
-            <FeedItems items={feedItems.current} onUpdate={update} />
+            <FeedItems items={feedItems.current} onUpdate={update} onDelete={update}/>
             
             </>
             :""}
