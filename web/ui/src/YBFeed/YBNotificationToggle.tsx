@@ -26,8 +26,11 @@ export function NotificationToggle(props:NotificationToggleProps) {
             }
             const connection = new FeedConnector()
 
-            navigator.serviceWorker.ready
+            navigator.serviceWorker.getRegistration(window.location.href)
                 .then(function(registration) {  
+                    if (!registration) {
+                        return
+                    }
                     return registration.pushManager.subscribe({
                         userVisibleOnly: true,
                         applicationServerKey: urlBase64ToUint8Array(vapid),
@@ -47,6 +50,37 @@ export function NotificationToggle(props:NotificationToggleProps) {
                 .catch(err => console.error(err));
         })
     }
+    // async function unsubscribe(): Promise<Boolean> {
+    //     return new Promise((resolve, reject) => {
+    //         if (!vapid) {
+    //             reject("VAPID not declared")
+    //         }
+    //         const connection = new FeedConnector()
+
+    //         navigator.serviceWorker.ready
+    //             .then(function(registration) {
+    //                 registration.pushManager.getSubscription()
+    //                     .then(function(subscription) {
+    //                         if (subscription) {
+    //                             subscription.unsubscribe()
+    //                                 .then(b => {
+    //                                     connection.RemoveSubscription(feedName,JSON.stringify(subscription))
+    //                                         .then((r) => {
+    //                                             registration.unregister()
+    //                                                 .then(b => {
+    //                                                     resolve(true)
+    //                                                 })
+    //                                         })
+    //                                 })
+    //                         }
+    //                         else {
+    //                             reject("Unable to unsubscribe (empty subscription)")
+    //                         }
+    //                     })
+    //             })
+    //             .catch(err => console.error(err));
+    //     })
+    // }
     async function unsubscribe(): Promise<Boolean> {
         return new Promise((resolve, reject) => {
             if (!vapid) {
@@ -84,10 +118,12 @@ export function NotificationToggle(props:NotificationToggleProps) {
 
     const toggleNotifications = (e: any) => {
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('service-worker.js');
-            navigator.serviceWorker.ready
+            navigator.serviceWorker.getRegistration(window.location.href)
                 .then(function(registration) {
-                    return registration.pushManager.getSubscription();
+                    if (!registration) {
+                        return
+                    }
+                    return registration.pushManager.getSubscription()
                 })
                 .then(function(subscription) {
                     if (subscription) {
@@ -95,6 +131,21 @@ export function NotificationToggle(props:NotificationToggleProps) {
                             unsubscribe()
                                 .then(() => {
                                     setNotificationsOn(false)
+                                })
+                        }
+                        else {
+                            setLoading(true)
+                            subscribe()
+                                .then((b) => {
+                                    setLoading(false)
+                                    if (b) {
+                                        setNotificationsOn(true)
+                                    }
+                                })
+                                .catch(e => {
+                                    setLoading(false)
+                                    console.log(e)
+                                    message.error("Error")
                                 })
                         }
                     }
@@ -119,12 +170,17 @@ export function NotificationToggle(props:NotificationToggleProps) {
 
     useEffect(() => {
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('service-worker.js');
-            navigator.serviceWorker.ready
+            navigator.serviceWorker.register('service-worker.js',{scope: "/" + feedName});
+            navigator.serviceWorker.getRegistration(window.location.href)
                 .then(function(registration) {
+                    if (! registration) {
+                        return
+                    }
                     setCanPushNotification(registration.pushManager !== undefined)
-                    if (registration.pushManager) {
-                        return registration.pushManager.getSubscription();
+                    if (registration.scope === window.location.href) {
+                        if (registration.pushManager) {
+                            return registration.pushManager.getSubscription();
+                        }
                     }
                 })
                 .then(function(subscription) {
