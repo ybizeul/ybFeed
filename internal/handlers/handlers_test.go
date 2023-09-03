@@ -48,12 +48,16 @@ const (
 	AuthTypeFail
 )
 
-func (t APITestRequest) performRequest() *http.Response {
+func (t APITestRequest) performRequest() (*http.Response, error) {
 	const goodSecret = "b90e516e-b256-41ff-a84e-a9e8d5b6fe30"
 	const badSecret = "foo"
 
-	api := NewApiHandler(path.Join(baseDir, dataDir))
+	api, err := NewApiHandler(path.Join(baseDir, dataDir))
+	if err != nil {
+		return nil, err
+	}
 	api.MaxBodySize = 5 * 1024 * 1024
+	r := api.GetServer()
 
 	authQuery := ""
 	switch t.queryAuthType {
@@ -88,9 +92,10 @@ func (t APITestRequest) performRequest() *http.Response {
 	}
 	w := httptest.NewRecorder()
 
-	api.ApiHandleFunc(w, req)
+	r.ServeHTTP(w, req)
+	//api.ApiHandleFunc(w, req)
 
-	return w.Result()
+	return w.Result(), nil
 }
 
 func TestCreateFeed(t *testing.T) {
@@ -100,7 +105,7 @@ func TestCreateFeed(t *testing.T) {
 		os.RemoveAll(path.Join(baseDir, dataDir, feedName))
 	})
 
-	res := APITestRequest{
+	res, _ := APITestRequest{
 		method: http.MethodGet,
 		feed:   feedName,
 		body:   nil,
@@ -124,7 +129,7 @@ func TestCreateFeed(t *testing.T) {
 }
 
 func TestGetFeedNoCredentials(t *testing.T) {
-	res := APITestRequest{
+	res, _ := APITestRequest{
 		method: http.MethodGet,
 		body:   nil,
 	}.performRequest()
@@ -147,7 +152,7 @@ func TestGetFeedNoCredentials(t *testing.T) {
 }
 
 func TestGetFeedBadCookie(t *testing.T) {
-	res := APITestRequest{
+	res, _ := APITestRequest{
 		method:         http.MethodGet,
 		body:           nil,
 		cookieAuthType: AuthTypeFail,
@@ -160,7 +165,7 @@ func TestGetFeedBadCookie(t *testing.T) {
 
 func TestGetFeedCookieAuth(t *testing.T) {
 
-	res := APITestRequest{
+	res, _ := APITestRequest{
 		method:         http.MethodGet,
 		feed:           testFeedName,
 		body:           nil,
@@ -173,7 +178,7 @@ func TestGetFeedCookieAuth(t *testing.T) {
 }
 
 func TestGetFeedBadQuerySecret(t *testing.T) {
-	res := APITestRequest{
+	res, _ := APITestRequest{
 		method:        http.MethodGet,
 		body:          nil,
 		queryAuthType: AuthTypeFail,
@@ -185,7 +190,7 @@ func TestGetFeedBadQuerySecret(t *testing.T) {
 }
 
 func TestGetFeedURLAuth(t *testing.T) {
-	res := APITestRequest{
+	res, _ := APITestRequest{
 		method:        http.MethodGet,
 		body:          nil,
 		queryAuthType: AuthTypeAuth,
@@ -199,7 +204,7 @@ func TestGetFeedURLAuth(t *testing.T) {
 func TestGetFeedItemNoCredentials(t *testing.T) {
 	const item = "Pasted Image 1.png"
 
-	res := APITestRequest{
+	res, _ := APITestRequest{
 		method: http.MethodGet,
 		item:   item,
 		body:   nil,
@@ -213,7 +218,7 @@ func TestGetFeedItemNoCredentials(t *testing.T) {
 func TestGetFeedItem(t *testing.T) {
 	const item = "Pasted Image 1.png"
 
-	res := APITestRequest{
+	res, _ := APITestRequest{
 		method:         http.MethodGet,
 		item:           item,
 		body:           nil,
@@ -228,7 +233,7 @@ func TestGetFeedItem(t *testing.T) {
 func TestGetFeedItemNonExistentFeed(t *testing.T) {
 	const item = "Pasted Image 1.png"
 
-	res := APITestRequest{
+	res, _ := APITestRequest{
 		method: http.MethodGet,
 		feed:   "foo",
 		item:   item,
@@ -240,7 +245,7 @@ func TestGetFeedItemNonExistentFeed(t *testing.T) {
 }
 
 func TestGetFeedItemNonExistent(t *testing.T) {
-	res := APITestRequest{
+	res, _ := APITestRequest{
 		method:         http.MethodGet,
 		item:           "foo",
 		cookieAuthType: AuthTypeAuth,
@@ -260,7 +265,7 @@ func TestSetPinNoCredentials(t *testing.T) {
 
 	buf := bytes.NewBuffer([]byte(pin))
 
-	res := APITestRequest{
+	res, _ := APITestRequest{
 		method: http.MethodPatch,
 		body:   buf,
 	}.performRequest()
@@ -285,7 +290,7 @@ func TestSetPin(t *testing.T) {
 
 	buf := bytes.NewBuffer([]byte(pin))
 
-	res := APITestRequest{
+	res, _ := APITestRequest{
 		method:         http.MethodPatch,
 		body:           buf,
 		cookieAuthType: AuthTypeAuth,
@@ -321,7 +326,7 @@ func TestSetBadPin(t *testing.T) {
 
 	buf := bytes.NewBuffer([]byte(pin))
 
-	res := APITestRequest{
+	res, _ := APITestRequest{
 		method:         http.MethodPatch,
 		body:           buf,
 		cookieAuthType: AuthTypeAuth,
@@ -342,7 +347,7 @@ func TestAddAndRemoveContent(t *testing.T) {
 
 	reader, err := os.Open(filePath)
 
-	res := APITestRequest{
+	res, _ := APITestRequest{
 		method:         http.MethodPost,
 		body:           reader,
 		cookieAuthType: AuthTypeAuth,
@@ -363,7 +368,7 @@ func TestAddAndRemoveContent(t *testing.T) {
 	}
 
 	// Delete request
-	res = APITestRequest{
+	res, _ = APITestRequest{
 		method:         http.MethodDelete,
 		item:           "Pasted Image 2.png",
 		cookieAuthType: AuthTypeAuth,
@@ -382,7 +387,7 @@ func TestAddAndRemoveContent(t *testing.T) {
 func TestAddContentTooBig(t *testing.T) {
 	b := bytes.NewBuffer(make([]byte, 6*1024*1024))
 
-	res := APITestRequest{
+	res, _ := APITestRequest{
 		method:         http.MethodPost,
 		body:           b,
 		cookieAuthType: AuthTypeAuth,
@@ -399,7 +404,7 @@ func TestAddContentTooBig(t *testing.T) {
 }
 
 func TestAddContentWrongContentType(t *testing.T) {
-	res := APITestRequest{
+	res, _ := APITestRequest{
 		method:         http.MethodPost,
 		cookieAuthType: AuthTypeAuth,
 		contentType:    "foo/bar",
@@ -415,7 +420,7 @@ func TestAddContentWrongContentType(t *testing.T) {
 }
 
 func TestAddContentNonExistentFeed(t *testing.T) {
-	res := APITestRequest{
+	res, _ := APITestRequest{
 		method:      http.MethodPost,
 		feed:        "foo",
 		contentType: "foo/bar",
@@ -430,7 +435,7 @@ func TestAddContentNonExistentFeed(t *testing.T) {
 	}
 }
 func TestRemoveNonExistentContent(t *testing.T) {
-	res := APITestRequest{
+	res, _ := APITestRequest{
 		method:         http.MethodDelete,
 		cookieAuthType: AuthTypeAuth,
 		item:           "foo",
@@ -446,7 +451,7 @@ func TestRemoveNonExistentContent(t *testing.T) {
 }
 
 func TestRemoveItemNonExistentFeed(t *testing.T) {
-	res := APITestRequest{
+	res, _ := APITestRequest{
 		method: http.MethodDelete,
 		feed:   "foo",
 		item:   "foo",
