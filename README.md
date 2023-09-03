@@ -41,7 +41,7 @@ Here are some I already identified :
 - ybFeed relies on a cookie to authenticate the session, if the cookie is lost
 there is no easy way to retrieve the feed (you can get it from the `secret` file
 in the feed directory)
-- Most modern browser won't honor loog cookie lifetime, some alternative
+- Most modern browser won't honor long cookie lifetime, some alternative
 authentication would be needed to get access once the cookie is expired
 - Security could probably be improved, tokens and PINs are stored in clear on
 the filesystem
