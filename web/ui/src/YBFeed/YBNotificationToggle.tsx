@@ -17,6 +17,7 @@ export function NotificationToggle(props:NotificationToggleProps) {
     const {vapid, feedName} = props
     const [notificationsOn,setNotificationsOn] = useState(false)
     const [loading,setLoading] = useState(false)
+    const [canPushNotifications, setCanPushNotification] = useState(false)
     async function subscribe(): Promise<Boolean> {
         return new Promise((resolve, reject) => {
             if (!vapid) {
@@ -101,7 +102,10 @@ export function NotificationToggle(props:NotificationToggleProps) {
             navigator.serviceWorker.register('service-worker.js');
             navigator.serviceWorker.ready
                 .then(function(registration) {
-                    return registration.pushManager.getSubscription();
+                    setCanPushNotification(registration.pushManager !== undefined)
+                    if (registration.pushManager) {
+                        return registration.pushManager.getSubscription();
+                    }
                 })
                 .then(function(subscription) {
                     if (subscription) {
@@ -112,11 +116,15 @@ export function NotificationToggle(props:NotificationToggleProps) {
     })
 
     return(
+        <>
+        {canPushNotifications?
         <Button 
             type={notificationsOn?"primary":"default"}
             loading={loading}
             icon={<BellOutlined/>}
             onClick={toggleNotifications}
         />
+        :""}
+        </>
     )
 }
