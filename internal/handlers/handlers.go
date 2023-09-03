@@ -9,18 +9,24 @@ import (
 	"net/url"
 	"os"
 	"path"
-	"strings"
 	"time"
 
 	"golang.org/x/exp/slog"
 
+	"github.com/Appboy/webpush-go"
+	"github.com/go-chi/chi/middleware"
+	"github.com/go-chi/chi/v5"
 	"github.com/ybizeul/ybfeed/internal/feed"
 	"github.com/ybizeul/ybfeed/internal/utils"
 	"github.com/ybizeul/ybfeed/web/ui"
 )
 
-var handler = http.FileServer(http.FS(ui.GetUiFs()))
+var webUiHandler = http.FileServer(http.FS(ui.GetUiFs()))
 
+// RootHandlerFunc figures out how to handle incoming HTTP requests.
+// If the requests points to an existing file in web UI (CSS, JS, etc)
+// then it serves this file from webUiHandler, otherwise it returns
+// index.html for proper react routing
 func RootHandlerFunc(w http.ResponseWriter, r *http.Request) {
 	slog.Default().WithGroup("http").Debug("Root request", slog.Any("request", r))
 	p := r.URL.Path
@@ -39,14 +45,13 @@ func RootHandlerFunc(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		slog.Error("Unable to get web ui fs", slog.String("error", err.Error()))
 	}
-
 	if len(matches) == 1 {
-		handler.ServeHTTP(w, r)
+		webUiHandler.ServeHTTP(w, r)
 		return
 	}
 
 	//
-	// For everything else, it goes to index.html
+	// Everything else goes to index.html
 	//
 
 	content, err := fs.ReadFile(ui, "index.html")
@@ -61,41 +66,105 @@ type ApiHandler struct {
 	BasePath    string
 	Version     string
 	MaxBodySize int
+	Config      APIConfig
+	HttpPort    int
 }
 
-func NewApiHandler(basePath string) *ApiHandler {
+type APIConfig struct {
+	NotificationSettings NotificationSettings `json:"notification,omitempty"`
+}
+type NotificationSettings struct {
+	VAPIDPublicKey  string
+	VAPIDPrivateKey string
+}
+
+func NewApiHandler(basePath string) (*ApiHandler, error) {
 	os.MkdirAll(basePath, 0700)
-	return &ApiHandler{
+
+	// Check configuration
+	var config = &APIConfig{}
+	d, err := os.ReadFile(path.Join(basePath, "config.json"))
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return nil, err
+		} else {
+			privateKey, publicKey, err := webpush.GenerateVAPIDKeys()
+			if err != nil {
+				return nil, err
+			}
+			config.NotificationSettings = NotificationSettings{
+				VAPIDPublicKey:  publicKey,
+				VAPIDPrivateKey: privateKey,
+			}
+		}
+	} else {
+		err = json.Unmarshal(d, config)
+		if err != nil {
+			return nil, err
+		}
+	}
+	result := &ApiHandler{
 		BasePath: basePath,
+		Config:   *config,
+	}
+
+	result.WriteConfig()
+
+	return result, nil
+}
+func (api *ApiHandler) WriteConfig() error {
+	b, err := json.Marshal(api.Config)
+	if err != nil {
+		return err
+	}
+
+	err = os.WriteFile(path.Join(api.BasePath, "config.json"), b, 0600)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+func (api *ApiHandler) StartServer() {
+	r := api.GetServer()
+	http.ListenAndServe(fmt.Sprintf(":%d", api.HttpPort), r)
+	err := http.ListenAndServe(fmt.Sprintf(":%d", api.HttpPort), r)
+	if err != nil {
+		slog.Error("Unable to start HTTP server",
+			slog.String("error", err.Error()))
+		os.Exit(1)
 	}
 }
+func (api *ApiHandler) GetServer() *chi.Mux {
+	r := chi.NewRouter()
+	r.Use(middleware.Logger)
 
-func (api *ApiHandler) ApiHandleFunc(w http.ResponseWriter, r *http.Request) {
-	p := strings.TrimSuffix(r.URL.Path, "/")
-	split := strings.Split(p, "/")
+	r.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ctx := r.Context()
+			w.Header().Add("ybFeed-Version", api.Version)
+			w.Header().Add("ybFeed-VAPIDPublicKey", api.Config.NotificationSettings.VAPIDPublicKey)
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	})
+	r.Route("/api/feed", func(r chi.Router) {
+		r.Get("/{feedName}", api.feedHandlerFunc)
+		r.Post("/{feedName}", api.feedPostHandlerFunc)
+		r.Patch("/{feedName}", api.feedPatchHandlerFunc)
 
-	w.Header().Add("ybFeed-Version", api.Version)
+		r.Get("/{feedName}/{itemName}", api.feedItemHandlerFunc)
+		r.Delete("/{feedName}/{itemName}", api.feedItemDeleteHandlerFunc)
 
-	if len(split) == 4 {
-		if r.Method == "GET" {
-			api.feedHandlerFunc(w, r)
-		} else if r.Method == "POST" {
-			api.feedPostHandlerFunc(w, r)
-		} else if r.Method == "PATCH" {
-			api.feedPatchHandlerFunc(w, r)
-		}
-	} else if len(split) == 5 {
-		if r.Method == "GET" {
-			api.feedItemHandlerFunc(w, r)
-		} else if r.Method == "DELETE" {
-			api.feedItemDeleteHandlerFunc(w, r)
-		}
-	} else if len(split) == 2 {
-		w.WriteHeader(200)
-		return
-	} else {
-		utils.CloseWithCodeAndMessage(w, 400, "Malformed request")
-	}
+		r.Post("/{feedName}/subscription", api.feedSubscriptionHandlerFunc)
+	})
+	r.Get("/*", RootHandlerFunc)
+
+	slog.Info("ybFeed starting",
+		slog.String("version", api.Version),
+		slog.String("data_dir", api.BasePath),
+		slog.Int("port", api.HttpPort),
+		slog.Int("max-upload-size", api.MaxBodySize))
+
+	return r
 }
 
 func (api *ApiHandler) feedHandlerFunc(w http.ResponseWriter, r *http.Request) {
@@ -103,18 +172,18 @@ func (api *ApiHandler) feedHandlerFunc(w http.ResponseWriter, r *http.Request) {
 
 	secret, fromURL := utils.GetSecret(r)
 
-	feedName, err := feed.FeedNameFromPath(r.URL.Path)
+	feedName, _ := url.QueryUnescape(chi.URLParam(r, "feedName"))
 
-	if err != nil {
+	if feedName == "" {
 		utils.CloseWithCodeAndMessage(w, 500, "Unable to obtain feed name")
 	}
 
-	p, err := feed.GetFeed(path.Join(api.BasePath, *feedName))
+	p, err := feed.GetFeed(path.Join(api.BasePath, feedName))
 
 	if err != nil {
 		yberr := err.(*feed.FeedError)
 		if yberr.Code == 404 {
-			p, err = feed.NewFeed(api.BasePath, *feedName)
+			p, err = feed.NewFeed(api.BasePath, feedName)
 			secret = p.Config.Secret
 			if err != nil {
 				yberr := err.(*feed.FeedError)
@@ -127,7 +196,7 @@ func (api *ApiHandler) feedHandlerFunc(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	result, err := feed.GetPublicFeed(api.BasePath, *feedName, p.Config.Secret)
+	result, err := feed.GetPublicFeed(api.BasePath, feedName, p.Config.Secret)
 
 	err = p.IsSecretValid(secret)
 
@@ -140,7 +209,7 @@ func (api *ApiHandler) feedHandlerFunc(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:    "Secret",
 		Value:   result.Secret,
-		Path:    fmt.Sprintf("/api/feed/%s", *feedName),
+		Path:    fmt.Sprintf("/api/feed/%s", feedName),
 		Expires: time.Now().Add(time.Hour * 24 * 365 * 10),
 	})
 
@@ -148,7 +217,7 @@ func (api *ApiHandler) feedHandlerFunc(w http.ResponseWriter, r *http.Request) {
 		http.SetCookie(w, &http.Cookie{
 			Name:    "Secret",
 			Value:   result.Secret,
-			Path:    fmt.Sprintf("/api/feed/%s", *feedName),
+			Path:    fmt.Sprintf("/api/feed/%s", feedName),
 			Expires: time.Now().Add(time.Hour * 24 * 365 * 10),
 		})
 	}
@@ -165,9 +234,11 @@ func (api *ApiHandler) feedPatchHandlerFunc(w http.ResponseWriter, r *http.Reque
 	slog.Default().WithGroup("http").Debug("Feed API Set PIN request", slog.Any("request", r))
 	secret, _ := utils.GetSecret(r)
 
-	feedName, err := feed.FeedNameFromPath(r.URL.Path)
-
-	f, err := feed.GetFeed(path.Join(api.BasePath, *feedName))
+	feedName, _ := url.QueryUnescape(chi.URLParam(r, "feedName"))
+	if feedName == "" {
+		utils.CloseWithCodeAndMessage(w, 500, "Unable to obtain feed name")
+	}
+	f, err := feed.GetFeed(path.Join(api.BasePath, feedName))
 
 	err = f.IsSecretValid(secret)
 
@@ -195,9 +266,12 @@ func (api *ApiHandler) feedItemHandlerFunc(w http.ResponseWriter, r *http.Reques
 
 	secret, _ := utils.GetSecret(r)
 
-	feedName, err := feed.FeedNameFromPath(r.URL.Path)
+	feedName, _ := url.QueryUnescape(chi.URLParam(r, "feedName"))
+	if feedName == "" {
+		utils.CloseWithCodeAndMessage(w, 500, "Unable to obtain feed name")
+	}
 
-	f, err := feed.GetFeed(path.Join(api.BasePath, *feedName))
+	f, err := feed.GetFeed(path.Join(api.BasePath, feedName))
 
 	if err != nil {
 		yberr := err.(*feed.FeedError)
@@ -213,14 +287,11 @@ func (api *ApiHandler) feedItemHandlerFunc(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	fileNameElement := strings.Split(r.URL.Path, "/")[4]
-	feedItem, err := url.QueryUnescape(fileNameElement)
+	feedItem, _ := url.QueryUnescape(chi.URLParam(r, "itemName"))
 
-	if err != nil {
-		w.WriteHeader(500)
-		w.Write([]byte(fmt.Sprintf("Unable to parse file name '%s'", fileNameElement)))
+	if feedItem == "" {
+		utils.CloseWithCodeAndMessage(w, 500, "Unable to obtain feed item")
 	}
-
 	content, err := f.GetItem(feedItem)
 
 	if err != nil {
@@ -236,9 +307,12 @@ func (api *ApiHandler) feedPostHandlerFunc(w http.ResponseWriter, r *http.Reques
 
 	secret, _ := utils.GetSecret(r)
 
-	feedName, err := feed.FeedNameFromPath(r.URL.Path)
+	feedName, _ := url.QueryUnescape(chi.URLParam(r, "feedName"))
+	if feedName == "" {
+		utils.CloseWithCodeAndMessage(w, 500, "Unable to obtain feed name")
+	}
 
-	f, err := feed.GetFeed(path.Join(api.BasePath, *feedName))
+	f, err := feed.GetFeed(path.Join(api.BasePath, feedName))
 
 	if err != nil {
 		yberr := err.(*feed.FeedError)
@@ -257,12 +331,22 @@ func (api *ApiHandler) feedPostHandlerFunc(w http.ResponseWriter, r *http.Reques
 	contentType := r.Header.Get("Content-type")
 
 	err = f.AddItem(contentType, http.MaxBytesReader(w, r.Body, int64(api.MaxBodySize)))
-	//err = f.AddItem(contentType, r.Body)
 
 	if err != nil {
 		yberr := err.(*feed.FeedError)
 		utils.CloseWithCodeAndMessage(w, yberr.Code, yberr.Error())
 		return
+	}
+
+	// Send push notifications
+	for _, subscription := range f.Config.Subscriptions {
+		resp, _ := webpush.SendNotification([]byte(fmt.Sprintf("New item posted to feed %s", f.Name())), &subscription, &webpush.Options{
+			Subscriber:      "example@example.com", // Do not include "mailto:"
+			VAPIDPublicKey:  api.Config.NotificationSettings.VAPIDPublicKey,
+			VAPIDPrivateKey: api.Config.NotificationSettings.VAPIDPrivateKey,
+			TTL:             30,
+		})
+		defer resp.Body.Close()
 	}
 
 	w.Write([]byte("OK"))
@@ -273,9 +357,12 @@ func (api *ApiHandler) feedItemDeleteHandlerFunc(w http.ResponseWriter, r *http.
 
 	secret, _ := utils.GetSecret(r)
 
-	feedName, err := feed.FeedNameFromPath(r.URL.Path)
+	feedName, _ := url.QueryUnescape(chi.URLParam(r, "feedName"))
+	if feedName == "" {
+		utils.CloseWithCodeAndMessage(w, 500, "Unable to obtain feed name")
+	}
 
-	f, err := feed.GetFeed(path.Join(api.BasePath, *feedName))
+	f, err := feed.GetFeed(path.Join(api.BasePath, feedName))
 
 	if err != nil {
 		yberr := err.(*feed.FeedError)
@@ -291,16 +378,69 @@ func (api *ApiHandler) feedItemDeleteHandlerFunc(w http.ResponseWriter, r *http.
 		return
 	}
 
-	item, err := url.QueryUnescape(strings.Split(r.URL.Path, "/")[4])
-	if err != nil {
-		utils.CloseWithCodeAndMessage(w, 500, "Unable to unescape query string")
-		return
+	feedItem, _ := url.QueryUnescape(chi.URLParam(r, "itemName"))
+	if feedItem == "" {
+		utils.CloseWithCodeAndMessage(w, 500, "Unable to obtain feed item")
 	}
-	err = f.RemoveItem(item)
+
+	err = f.RemoveItem(feedItem)
 	if err != nil {
 		yberr := err.(*feed.FeedError)
 		utils.CloseWithCodeAndMessage(w, yberr.Code, yberr.Error())
 		return
 	}
 	w.Write([]byte("Item Removed"))
+}
+
+func (api *ApiHandler) feedSubscriptionHandlerFunc(w http.ResponseWriter, r *http.Request) {
+
+	slog.Default().WithGroup("http").Debug("Feed subscription request", slog.Any("request", r))
+
+	secret, _ := utils.GetSecret(r)
+
+	feedName, _ := url.QueryUnescape(chi.URLParam(r, "feedName"))
+	if feedName == "" {
+		utils.CloseWithCodeAndMessage(w, 500, "Unable to obtain feed name")
+	}
+
+	f, err := feed.GetFeed(path.Join(api.BasePath, feedName))
+
+	if err != nil {
+		yberr := err.(*feed.FeedError)
+		utils.CloseWithCodeAndMessage(w, yberr.Code, yberr.Error())
+		return
+	}
+
+	err = f.IsSecretValid(secret)
+
+	if err != nil {
+		yberr := err.(*feed.FeedError)
+		utils.CloseWithCodeAndMessage(w, yberr.Code, yberr.Error())
+		return
+	}
+
+	body, err := io.ReadAll(r.Body)
+
+	defer r.Body.Close()
+
+	if err != nil {
+		utils.CloseWithCodeAndMessage(w, 500, "Unable to read subscription")
+		return
+	}
+
+	var s webpush.Subscription
+
+	err = json.Unmarshal(body, &s)
+
+	if err != nil {
+		utils.CloseWithCodeAndMessage(w, 500, "Unable to parse subscription")
+		return
+	}
+
+	err = f.Config.AddSubscription(s)
+
+	if err != nil {
+		utils.CloseWithCodeAndMessage(w, 500, "Unable to add subscription")
+		return
+	}
 }

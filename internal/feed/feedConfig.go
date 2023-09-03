@@ -7,14 +7,15 @@ import (
 	"path"
 	"time"
 
+	"github.com/Appboy/webpush-go"
 	"golang.org/x/exp/slog"
 )
 
 type FeedConfig struct {
-	Secret string `json:"secret"`
-	PIN    *PIN   `json:"pin,omitempty"`
-
-	feed *Feed
+	Secret        string `json:"secret"`
+	PIN           *PIN   `json:"pin,omitempty"`
+	Subscriptions []webpush.Subscription
+	feed          *Feed
 }
 
 type PIN struct {
@@ -111,6 +112,20 @@ func (config *FeedConfig) SetPIN(s string) error {
 		Expiration: time.Now().Add(2 * time.Minute),
 	}
 	config.PIN = pin
+	err := config.Write()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (config *FeedConfig) AddSubscription(s webpush.Subscription) error {
+	for _, t := range config.Subscriptions {
+		if s.Endpoint == t.Endpoint && s.Keys.Auth == t.Keys.Auth && s.Keys.P256dh == t.Keys.P256dh {
+			return nil
+		}
+	}
+	config.Subscriptions = append(config.Subscriptions, s)
 	err := config.Write()
 	if err != nil {
 		return err

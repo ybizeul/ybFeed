@@ -46,11 +46,11 @@ const App: React.FC = () => {
     }, [windowQuery.matches]);
 
     useEffect(() => {
-        fetch("/api")
+        fetch("/")
         .then(r => {
             let v = r.headers.get("Ybfeed-Version")
             if (v !== null) {
-            setVersion(v)
+                setVersion(v)
             }
         })
     })

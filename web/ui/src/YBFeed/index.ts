@@ -3,6 +3,7 @@ export * from './YBPasteCardComponent'
 export * from './YBFeedItemsComponent'
 export * from './YBFeedItemComponent'
 export * from './YBFeedComponent'
+export * from './YBNotificationToggle'
 
 export interface FeedItem {
     name: string,
@@ -124,6 +125,29 @@ export class FeedConnector {
                 method: "PATCH",
                 credentials: "include",
                 body: pin
+            })
+            .then((f) => {
+                if (f.status !== 200) {
+                    f.text().then((b) => {
+                        reject(new YBFeedError(f.status, b))
+                    })
+                    .catch((e) => {
+                        reject(new YBFeedError(f.status, "Server Unavailable"))
+                    })
+                }
+                resolve(true)
+            })
+            .catch((e) => {
+                reject(new YBFeedError(e.status, "Server Unavailable"))
+            })
+        })
+    }
+    async AddSubscription(feedName: string, subscription: any): Promise<boolean> {
+        return new Promise((resolve, reject) => {
+            fetch(this.feedUrl(feedName)+"/subscription",{
+                method: "POST",
+                credentials: "include",
+                body: subscription
             })
             .then((f) => {
                 if (f.status !== 200) {

@@ -7,7 +7,7 @@ import { Button, Form, Input, Dropdown, Space, Modal, Row, Col } from 'antd';
 import { message } from 'antd';
 import type { MenuProps } from 'antd';
 
-import { FeedConnector, YBBreadCrumb, YBPasteCard, FeedItems, FeedItem } from '.'
+import { FeedConnector, YBBreadCrumb, YBPasteCard, FeedItems, FeedItem, NotificationToggle } from '.'
 
 import {
     LinkOutlined,
@@ -27,6 +27,8 @@ export function FeedComponent() {
     const [authenticated,setAuthenticated] = useState<boolean|undefined>(undefined)
     const [updateGeneration,setUpdateGeneration] = useState(0)
     const [fatal, setFatal] = useState(null)
+    const [vapid, setVapid] = useState<string|undefined>(undefined)
+
     const connection = new FeedConnector()
     //
     // Creating links to feed
@@ -111,7 +113,10 @@ export function FeedComponent() {
 
     useEffect(
         () => {
+            // Update feed every 2s
             const interval = window.setInterval(update,2000)
+
+            // Authenticate feed if a secret is found in URL
             const secret = searchParams.get("secret")
             if (secret) {
                 console.log("test")
@@ -130,6 +135,17 @@ export function FeedComponent() {
             else {
                 update()
             }
+
+            // Set web notification public key
+            fetch("/api/feed/"+encodeURIComponent(feedParam),{cache: "no-cache"})
+                .then(r => {
+                    if (r.status === 200) {
+                        var v = r.headers.get("Ybfeed-Vapidpublickey")
+                        if (v) {
+                            setVapid(v)
+                        }
+                    }
+                })
             return () => {
                 window.clearInterval(interval)
             }
@@ -185,21 +201,26 @@ export function FeedComponent() {
             message.error(e.message)
         })
       }
-    
+
     return (
         <>
         {goTo?
         <Navigate to={goTo} />
         :""}
         {authenticated===true?
-        <Dropdown menu={menuProps}>
-            <Button style={{float: 'right'}} >
-                <Space>
-                <LinkOutlined onClick={copyLink}/>
-                <DownOutlined />
-                </Space>
-            </Button>
-        </Dropdown>
+        <Space style={{float: 'right'}}>
+            {vapid?
+            <NotificationToggle vapid={vapid} feedName={feedParam}/>
+            :""}
+            <Dropdown menu={menuProps}>
+                <Button>
+                    <Space>
+                        <LinkOutlined onClick={copyLink}/>
+                        <DownOutlined />
+                    </Space>
+                </Button>
+            </Dropdown>
+        </Space>
         :""}
 
         <YBBreadCrumb />

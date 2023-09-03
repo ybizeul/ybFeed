@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-	"net/http"
 	"os"
 
 	"github.com/urfave/cli/v2"
@@ -78,23 +76,15 @@ func run() {
 	makeDataDirectory(dataDir)
 
 	// Start HTTP Server
-	r := http.NewServeMux()
-
-	api := handlers.ApiHandler{
-		BasePath:    dataDir,
-		Version:     version,
-		MaxBodySize: maxBodySize * 1024 * 1024,
-	}
-
-	r.HandleFunc("/api/", api.ApiHandleFunc)
-	r.HandleFunc("/", handlers.RootHandlerFunc)
-
-	slog.Info("ybFeed starting", slog.String("version", version), slog.String("data_dir", dataDir), slog.Int("port", HTTP_PORT), slog.Int("max-upload-size", maxBodySize))
-	err := http.ListenAndServe(fmt.Sprintf(":%d", HTTP_PORT), r)
+	api, err := handlers.NewApiHandler(dataDir)
 	if err != nil {
-		slog.Error("Unable to start HTTP server", slog.String("error", err.Error()))
-		os.Exit(1)
+		return
 	}
+	api.Version = version
+	api.MaxBodySize = maxBodySize * 1024 * 1024
+	api.HttpPort = HTTP_PORT
+
+	api.StartServer()
 }
 
 func makeDataDirectory(dir string) {
