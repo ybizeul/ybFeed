@@ -71,8 +71,26 @@ type ApiHandler struct {
 }
 
 type APIConfig struct {
-	NotificationSettings NotificationSettings `json:"notification,omitempty"`
+	NotificationSettings *NotificationSettings `json:"notification,omitempty"`
 }
+
+func APIConfigFromFile(p string) (*APIConfig, error) {
+	var config = &APIConfig{}
+	d, err := os.ReadFile(path.Join(p))
+	if err != nil {
+		if os.IsNotExist(err) {
+			return config, nil
+		} else {
+			return nil, err
+		}
+	}
+	err = json.Unmarshal(d, config)
+	if err != nil {
+		return nil, err
+	}
+	return config, nil
+}
+
 type NotificationSettings struct {
 	VAPIDPublicKey  string
 	VAPIDPrivateKey string
@@ -82,27 +100,21 @@ func NewApiHandler(basePath string) (*ApiHandler, error) {
 	os.MkdirAll(basePath, 0700)
 
 	// Check configuration
-	var config = &APIConfig{}
-	d, err := os.ReadFile(path.Join(basePath, "config.json"))
+	var config, err = APIConfigFromFile(path.Join(basePath, "config.json"))
 	if err != nil {
-		if !os.IsNotExist(err) {
-			return nil, err
-		} else {
-			privateKey, publicKey, err := webpush.GenerateVAPIDKeys()
-			if err != nil {
-				return nil, err
-			}
-			config.NotificationSettings = NotificationSettings{
-				VAPIDPublicKey:  publicKey,
-				VAPIDPrivateKey: privateKey,
-			}
-		}
-	} else {
-		err = json.Unmarshal(d, config)
+		return nil, err
+	}
+	if config.NotificationSettings == nil {
+		privateKey, publicKey, err := webpush.GenerateVAPIDKeys()
 		if err != nil {
 			return nil, err
 		}
+		config.NotificationSettings = &NotificationSettings{
+			VAPIDPublicKey:  publicKey,
+			VAPIDPrivateKey: privateKey,
+		}
 	}
+
 	result := &ApiHandler{
 		BasePath: basePath,
 		Config:   *config,

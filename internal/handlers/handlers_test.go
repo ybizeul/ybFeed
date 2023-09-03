@@ -11,23 +11,13 @@ import (
 	"path"
 	"testing"
 
+	"github.com/Appboy/webpush-go"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/ybizeul/ybfeed/internal/feed"
 )
 
 const baseDir = "../../test/"
 const dataDir = "./data"
-
-func TestIndexHtml(t *testing.T) {
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	w := httptest.NewRecorder()
-	RootHandlerFunc(w, req)
-	res := w.Result()
-	if res.StatusCode != 200 {
-		t.Errorf("Expect code 200 but got %d", res.StatusCode)
-	}
-}
-
 const testFeedName = "test"
 
 type APITestRequest struct {
@@ -96,6 +86,50 @@ func (t APITestRequest) performRequest() (*http.Response, error) {
 	//api.ApiHandleFunc(w, req)
 
 	return w.Result(), nil
+}
+
+func TestFirstStart(t *testing.T) {
+	newDir := "FOO"
+	t.Cleanup(func() {
+		os.RemoveAll(path.Join(baseDir, newDir))
+	})
+
+	_, err := NewApiHandler(path.Join(baseDir, newDir))
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	c, err := APIConfigFromFile(path.Join(baseDir, dataDir, "config.json"))
+	if err != nil {
+		t.Error(err)
+	}
+
+	if c.NotificationSettings == nil ||
+		len(c.NotificationSettings.VAPIDPrivateKey) == 0 ||
+		len(c.NotificationSettings.VAPIDPrivateKey) == 0 {
+		t.Error("Invalid config file")
+	}
+
+}
+func TestIndexHtml(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	w := httptest.NewRecorder()
+	RootHandlerFunc(w, req)
+	res := w.Result()
+	if res.StatusCode != 200 {
+		t.Errorf("Expect code 200 but got %d", res.StatusCode)
+	}
+}
+
+func TestServiceWorker(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/service-worker.js", nil)
+	w := httptest.NewRecorder()
+	RootHandlerFunc(w, req)
+	res := w.Result()
+	if res.StatusCode != 200 {
+		t.Errorf("Expect code 200 but got %d", res.StatusCode)
+	}
 }
 
 func TestCreateFeed(t *testing.T) {
@@ -463,5 +497,50 @@ func TestRemoveItemNonExistentFeed(t *testing.T) {
 			t.Errorf("Expect code 404 but got %d (%s)", res.StatusCode, err.Error())
 		}
 		t.Errorf("Expect code 404 but got %d (%s)", res.StatusCode, string(b))
+	}
+}
+
+func TestSubscribeFeedNotifications(t *testing.T) {
+	body := `{"endpoint":"http://test.com","keys":{"auth":"AUTH","p256dh":"P256DH"}}`
+	b := bytes.NewBuffer([]byte(body))
+
+	t.Cleanup(func() {
+		f, _ := feed.GetFeed(path.Join(baseDir, dataDir, testFeedName))
+		f.Config.Subscriptions = []webpush.Subscription{}
+		f.Config.Write()
+	})
+
+	res, _ := APITestRequest{
+		method:         http.MethodPost,
+		feed:           testFeedName,
+		item:           "subscription",
+		cookieAuthType: AuthTypeAuth,
+		body:           b,
+	}.performRequest()
+
+	if res.StatusCode != 200 {
+		t.Errorf("Expected 200 but got %d", res.StatusCode)
+	}
+	f, err := feed.GetFeed(path.Join(baseDir, dataDir, testFeedName))
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	if len(f.Config.Subscriptions) == 0 {
+		t.Error("No subscriptions found")
+		return
+	}
+
+	if f.Config.Subscriptions[0].Endpoint != "http://test.com" {
+		t.Errorf("Bad endpoint, got %s", f.Config.Subscriptions[0].Endpoint)
+	}
+
+	if f.Config.Subscriptions[0].Keys.Auth != "AUTH" {
+		t.Errorf("Bad auth, got %s", f.Config.Subscriptions[0].Keys.Auth)
+	}
+
+	if f.Config.Subscriptions[0].Keys.P256dh != "P256DH" {
+		t.Errorf("Bad p256dh, got %s", f.Config.Subscriptions[0].Keys.P256dh)
 	}
 }
