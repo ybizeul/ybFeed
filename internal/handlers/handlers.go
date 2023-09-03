@@ -167,6 +167,7 @@ func (api *ApiHandler) GetServer() *chi.Mux {
 		r.Delete("/{feedName}/{itemName}", api.feedItemDeleteHandlerFunc)
 
 		r.Post("/{feedName}/subscription", api.feedSubscriptionHandlerFunc)
+		r.Delete("/{feedName}/subscription", api.feedUnsubscribeHandlerFunc)
 	})
 	r.Get("/*", RootHandlerFunc)
 
@@ -352,12 +353,14 @@ func (api *ApiHandler) feedPostHandlerFunc(w http.ResponseWriter, r *http.Reques
 
 	// Send push notifications
 	for _, subscription := range f.Config.Subscriptions {
+		slog.Info("Sending push notification", slog.String("endpoint", subscription.Endpoint))
 		resp, _ := webpush.SendNotification([]byte(fmt.Sprintf("New item posted to feed %s", f.Name())), &subscription, &webpush.Options{
 			Subscriber:      "example@example.com", // Do not include "mailto:"
 			VAPIDPublicKey:  api.Config.NotificationSettings.VAPIDPublicKey,
 			VAPIDPrivateKey: api.Config.NotificationSettings.VAPIDPrivateKey,
 			TTL:             30,
 		})
+		slog.Info("Response", slog.Any("resp", resp))
 		defer resp.Body.Close()
 	}
 
@@ -450,6 +453,59 @@ func (api *ApiHandler) feedSubscriptionHandlerFunc(w http.ResponseWriter, r *htt
 	}
 
 	err = f.Config.AddSubscription(s)
+
+	if err != nil {
+		utils.CloseWithCodeAndMessage(w, 500, "Unable to add subscription")
+		return
+	}
+}
+
+func (api *ApiHandler) feedUnsubscribeHandlerFunc(w http.ResponseWriter, r *http.Request) {
+
+	slog.Default().WithGroup("http").Debug("Feed subscription request", slog.Any("request", r))
+
+	secret, _ := utils.GetSecret(r)
+
+	feedName, _ := url.QueryUnescape(chi.URLParam(r, "feedName"))
+	if feedName == "" {
+		utils.CloseWithCodeAndMessage(w, 500, "Unable to obtain feed name")
+	}
+
+	f, err := feed.GetFeed(path.Join(api.BasePath, feedName))
+
+	if err != nil {
+		yberr := err.(*feed.FeedError)
+		utils.CloseWithCodeAndMessage(w, yberr.Code, yberr.Error())
+		return
+	}
+
+	err = f.IsSecretValid(secret)
+
+	if err != nil {
+		yberr := err.(*feed.FeedError)
+		utils.CloseWithCodeAndMessage(w, yberr.Code, yberr.Error())
+		return
+	}
+
+	body, err := io.ReadAll(r.Body)
+
+	defer r.Body.Close()
+
+	if err != nil {
+		utils.CloseWithCodeAndMessage(w, 500, "Unable to read subscription")
+		return
+	}
+
+	var s webpush.Subscription
+
+	err = json.Unmarshal(body, &s)
+
+	if err != nil {
+		utils.CloseWithCodeAndMessage(w, 500, "Unable to parse subscription")
+		return
+	}
+
+	err = f.Config.DeleteSubscription(s)
 
 	if err != nil {
 		utils.CloseWithCodeAndMessage(w, 500, "Unable to add subscription")

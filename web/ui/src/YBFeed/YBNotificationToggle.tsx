@@ -18,6 +18,7 @@ export function NotificationToggle(props:NotificationToggleProps) {
     const [notificationsOn,setNotificationsOn] = useState(false)
     const [loading,setLoading] = useState(false)
     const [canPushNotifications, setCanPushNotification] = useState(false)
+
     async function subscribe(): Promise<Boolean> {
         return new Promise((resolve, reject) => {
             if (!vapid) {
@@ -46,7 +47,32 @@ export function NotificationToggle(props:NotificationToggleProps) {
                 .catch(err => console.error(err));
         })
     }
-  
+    async function unsubscribe(): Promise<Boolean> {
+        return new Promise((resolve, reject) => {
+            if (!vapid) {
+                reject("VAPID not declared")
+            }
+            const connection = new FeedConnector()
+
+            navigator.serviceWorker.ready
+                .then(function(registration) {  
+                    return registration.pushManager.getSubscription()
+                })
+                .then(function(subscription) {
+                    if (subscription) {
+                        subscription.unsubscribe()
+                        connection.RemoveSubscription(feedName,JSON.stringify(subscription))
+                            .then((r) => {
+                                resolve(true)
+                            })
+                    }
+                    else {
+                        reject("Unable to unsubscribe (empty subscription)")
+                    }
+                })
+                .catch(err => console.error(err));
+        })
+    }
     function urlBase64ToUint8Array(base64String: string) {
         const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
         const base64 = (base64String + padding)
@@ -66,15 +92,9 @@ export function NotificationToggle(props:NotificationToggleProps) {
                 .then(function(subscription) {
                     if (subscription) {
                         if (notificationsOn) {
-                            subscription.unsubscribe()
-                                .then((b) => {
-                                    if (b) {
-                                        setNotificationsOn(false)
-                                    }
-                                })
-                                .catch((e) => {
-                                    console.log(e)
-                                    message.error("Error")
+                            unsubscribe()
+                                .then(() => {
+                                    setNotificationsOn(false)
                                 })
                         }
                     }

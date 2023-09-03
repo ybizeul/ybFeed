@@ -165,4 +165,28 @@ export class FeedConnector {
             })
         })
     }
+    async RemoveSubscription(feedName: string, subscription: any): Promise<boolean> {
+        return new Promise((resolve, reject) => {
+            fetch(this.feedUrl(feedName)+"/subscription",{
+                method: "DELETE",
+                credentials: "include",
+                body: subscription
+            })
+            .then((f) => {
+                if (f.status !== 200) {
+                    f.text().then((b) => {
+                        reject(new YBFeedError(f.status, b))
+                    })
+                    .catch((e) => {
+                        reject(new YBFeedError(f.status, "Server Unavailable"))
+                    })
+                }
+                resolve(true)
+            })
+            .catch((e) => {
+                reject(new YBFeedError(e.status, "Server Unavailable"))
+            })
+        })
+    }
+
 }

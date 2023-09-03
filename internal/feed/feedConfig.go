@@ -133,6 +133,23 @@ func (config *FeedConfig) AddSubscription(s webpush.Subscription) error {
 	return nil
 }
 
+func (config *FeedConfig) DeleteSubscription(s webpush.Subscription) error {
+	keepSubscriptions := []webpush.Subscription{}
+
+	for _, t := range config.Subscriptions {
+		if s.Endpoint == t.Endpoint && s.Keys.Auth == t.Keys.Auth && s.Keys.P256dh == t.Keys.P256dh {
+			continue
+		}
+		keepSubscriptions = append(keepSubscriptions, t)
+	}
+	config.Subscriptions = keepSubscriptions
+	err := config.Write()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (p *PIN) IsValid(s string) error {
 	if p.Expiration.Before(time.Now()) {
 		code := 401
