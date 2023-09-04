@@ -58,7 +58,11 @@ func RootHandlerFunc(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		slog.Error("Unable to read index.html from web ui", slog.String("error", err.Error()))
 	}
-	w.Write(content)
+
+	_, err = w.Write(content)
+	if err != nil {
+		slog.Error("Error while writing HTTP response", slog.String("error", err.Error()))
+	}
 }
 
 // Handle requests to /api
@@ -97,7 +101,9 @@ type NotificationSettings struct {
 }
 
 func NewApiHandler(basePath string) (*ApiHandler, error) {
-	os.MkdirAll(basePath, 0700)
+	if err := os.MkdirAll(basePath, 0700); err != nil {
+		return nil, err
+	}
 
 	// Check configuration
 	var config, err = APIConfigFromFile(path.Join(basePath, "config.json"))
@@ -120,7 +126,9 @@ func NewApiHandler(basePath string) (*ApiHandler, error) {
 		Config:   *config,
 	}
 
-	result.WriteConfig()
+	if err = result.WriteConfig(); err != nil {
+		return nil, err
+	}
 
 	return result, nil
 }
@@ -138,7 +146,6 @@ func (api *ApiHandler) WriteConfig() error {
 }
 func (api *ApiHandler) StartServer() {
 	r := api.GetServer()
-	http.ListenAndServe(fmt.Sprintf(":%d", api.HttpPort), r)
 	err := http.ListenAndServe(fmt.Sprintf(":%d", api.HttpPort), r)
 	if err != nil {
 		slog.Error("Unable to start HTTP server",
@@ -211,6 +218,12 @@ func (api *ApiHandler) feedHandlerFunc(w http.ResponseWriter, r *http.Request) {
 
 	result, err := feed.GetPublicFeed(api.BasePath, feedName, p.Config.Secret)
 
+	if err != nil {
+		yberr := err.(*feed.FeedError)
+		utils.CloseWithCodeAndMessage(w, yberr.Code, yberr.Error())
+		return
+	}
+
 	err = p.IsSecretValid(secret)
 
 	if err != nil {
@@ -240,7 +253,9 @@ func (api *ApiHandler) feedHandlerFunc(w http.ResponseWriter, r *http.Request) {
 		utils.CloseWithCodeAndMessage(w, 500, err.Error())
 		return
 	}
-	w.Write(j)
+	if _, err = w.Write(j); err != nil {
+		slog.Error("Error while writing HTTP response", slog.String("error", err.Error()))
+	}
 }
 
 func (api *ApiHandler) feedPatchHandlerFunc(w http.ResponseWriter, r *http.Request) {
@@ -253,6 +268,12 @@ func (api *ApiHandler) feedPatchHandlerFunc(w http.ResponseWriter, r *http.Reque
 	}
 	f, err := feed.GetFeed(path.Join(api.BasePath, feedName))
 
+	if err != nil {
+		yberr := err.(*feed.FeedError)
+		utils.CloseWithCodeAndMessage(w, yberr.Code, yberr.Error())
+		return
+	}
+
 	err = f.IsSecretValid(secret)
 
 	if err != nil {
@@ -263,7 +284,9 @@ func (api *ApiHandler) feedPatchHandlerFunc(w http.ResponseWriter, r *http.Reque
 	pin, err := io.ReadAll(r.Body)
 	if err != nil {
 		w.WriteHeader(500)
-		w.Write([]byte(err.Error()))
+		if _, err = w.Write([]byte(err.Error())); err != nil {
+			slog.Error("Error while writing HTTP response", slog.String("error", err.Error()))
+		}
 		return
 	}
 
@@ -271,7 +294,11 @@ func (api *ApiHandler) feedPatchHandlerFunc(w http.ResponseWriter, r *http.Reque
 		utils.CloseWithCodeAndMessage(w, 400, "Malformed PIN")
 		return
 	}
-	f.SetPIN(string(pin))
+	if err = f.SetPIN(string(pin)); err != nil {
+		yberr := err.(*feed.FeedError)
+		utils.CloseWithCodeAndMessage(w, yberr.Code, yberr.Error())
+		return
+	}
 }
 
 func (api *ApiHandler) feedItemHandlerFunc(w http.ResponseWriter, r *http.Request) {
@@ -282,6 +309,7 @@ func (api *ApiHandler) feedItemHandlerFunc(w http.ResponseWriter, r *http.Reques
 	feedName, _ := url.QueryUnescape(chi.URLParam(r, "feedName"))
 	if feedName == "" {
 		utils.CloseWithCodeAndMessage(w, 500, "Unable to obtain feed name")
+		return
 	}
 
 	f, err := feed.GetFeed(path.Join(api.BasePath, feedName))
@@ -312,7 +340,9 @@ func (api *ApiHandler) feedItemHandlerFunc(w http.ResponseWriter, r *http.Reques
 		utils.CloseWithCodeAndMessage(w, yberr.Code, yberr.Error())
 		return
 	}
-	w.Write(content)
+	if _, err = w.Write(content); err != nil {
+		slog.Error("Error while writing HTTP response", slog.String("error", err.Error()))
+	}
 }
 
 func (api *ApiHandler) feedPostHandlerFunc(w http.ResponseWriter, r *http.Request) {
@@ -364,7 +394,9 @@ func (api *ApiHandler) feedPostHandlerFunc(w http.ResponseWriter, r *http.Reques
 		defer resp.Body.Close()
 	}
 
-	w.Write([]byte("OK"))
+	if _, err = w.Write([]byte("OK")); err != nil {
+		slog.Error("Error while writing HTTP response", slog.String("error", err.Error()))
+	}
 }
 
 func (api *ApiHandler) feedItemDeleteHandlerFunc(w http.ResponseWriter, r *http.Request) {
@@ -404,7 +436,10 @@ func (api *ApiHandler) feedItemDeleteHandlerFunc(w http.ResponseWriter, r *http.
 		utils.CloseWithCodeAndMessage(w, yberr.Code, yberr.Error())
 		return
 	}
-	w.Write([]byte("Item Removed"))
+
+	if _, err = w.Write([]byte("Item Removed")); err != nil {
+		slog.Error("Error while writing HTTP response", slog.String("error", err.Error()))
+	}
 }
 
 func (api *ApiHandler) feedSubscriptionHandlerFunc(w http.ResponseWriter, r *http.Request) {

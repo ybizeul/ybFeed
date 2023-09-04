@@ -317,7 +317,7 @@ func TestSetPin(t *testing.T) {
 			},
 		)
 		c.PIN = nil
-		c.Write()
+		_ = c.Write()
 	})
 
 	const pin = "1234"
@@ -379,7 +379,7 @@ func TestAddAndRemoveContent(t *testing.T) {
 		os.Remove(newFilePath)
 	})
 
-	reader, err := os.Open(filePath)
+	reader, _ := os.Open(filePath)
 
 	res, _ := APITestRequest{
 		method:         http.MethodPost,
@@ -396,7 +396,7 @@ func TestAddAndRemoveContent(t *testing.T) {
 		t.Errorf("Expect code 200 but got %d (%s)", res.StatusCode, string(b))
 	}
 
-	_, err = os.Stat(newFilePath)
+	_, err := os.Stat(newFilePath)
 	if err != nil {
 		t.Error(err.Error())
 	}
@@ -507,7 +507,7 @@ func TestSubscribeFeedNotifications(t *testing.T) {
 	t.Cleanup(func() {
 		f, _ := feed.GetFeed(path.Join(baseDir, dataDir, testFeedName))
 		f.Config.Subscriptions = []webpush.Subscription{}
-		f.Config.Write()
+		_ = f.Config.Write()
 	})
 
 	res, _ := APITestRequest{
