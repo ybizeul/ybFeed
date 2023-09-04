@@ -119,15 +119,12 @@ export function FeedComponent() {
             // Authenticate feed if a secret is found in URL
             const secret = searchParams.get("secret")
             if (secret) {
-                console.log("test")
                 connection.AuthenticateFeed(feedParam,secret)
                     .then(() => {
-                        console.log("then")
                         setGoTo("/" + feedParam)
                         update()
                     })
                     .catch((e) => {
-                        console.log(e.message)
                         message.error(e.message)
                         setAuthenticated(false)
                     })
