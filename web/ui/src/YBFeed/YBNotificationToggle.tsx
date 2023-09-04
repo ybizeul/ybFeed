@@ -170,13 +170,12 @@ export function NotificationToggle(props:NotificationToggleProps) {
 
     useEffect(() => {
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('service-worker.js',{scope: "/" + feedName});
-            navigator.serviceWorker.getRegistration(window.location.href)
+            navigator.serviceWorker.register('service-worker.js',{scope: "/" + feedName})
                 .then(function(registration) {
+                    setCanPushNotification(registration.pushManager !== undefined)
                     if (! registration) {
                         return
                     }
-                    setCanPushNotification(registration.pushManager !== undefined)
                     if (registration.scope === window.location.href) {
                         if (registration.pushManager) {
                             return registration.pushManager.getSubscription();
