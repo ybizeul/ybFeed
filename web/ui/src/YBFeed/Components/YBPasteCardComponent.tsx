@@ -1,25 +1,33 @@
 import { useState,useEffect } from 'react'
-import { Input, Form } from 'antd'
+
+import { Textarea } from '@mantine/core';
+
+import { useForm } from '@mantine/form';
 import { useParams } from 'react-router-dom'
 
-interface PasteCardProps {
+import './YBPasteCardComponent.css'
+
+interface YBPasteCardComponentProps {
     empty?: boolean
     onPaste: () => void
 }
 
-export function YBPasteCard(props:PasteCardProps) {
+export function YBPasteCardComponent(props:YBPasteCardComponentProps) {
     const [isMobile, setIsMobile] = useState(false)
-    const [textFieldValue,setTextFieldValue] = useState("")
     const {feed} = useParams()
-
+    const form = useForm({
+        initialValues: {
+          text: '',
+        },
+    })
     //
     // Pasting Data
     //
     
     const handleOnPaste = (event: React.ClipboardEvent) => {
         const items = event.clipboardData.items
-        var data, type
-        setTextFieldValue("")
+        let data, type
+        form.setFieldValue("text","")
         for (let i=0; i<items.length;i++) {
             if (items[i].type.indexOf("image") === 0 && items[i].kind === "file") {
                 type = items[i].type
@@ -46,22 +54,22 @@ export function YBPasteCard(props:PasteCardProps) {
             credentials: "include"
           })
           .then(() => {
-            setTextFieldValue("")
+            form.setFieldValue("text","")
             props.onPaste()
           })
     }
-    const handleFinish = () => {
+    const handleFinish = (text:string) => {
         const requestHeaders: HeadersInit = new Headers();
         requestHeaders.set("Content-Type", "text/plain")
         fetch("/api/feed/" + encodeURIComponent(feed!),{
             method: "POST",
-            body: textFieldValue,
+            body: text,
             headers: requestHeaders,
             credentials: "include"
           })
           .then(() => {
-            setTextFieldValue("")
-          })
+            form.setFieldValue("text","")
+        })
     }
     useEffect(() => {
         const handleResize = () => {
@@ -81,9 +89,11 @@ export function YBPasteCard(props:PasteCardProps) {
         <div id="pasteCard" className="pasteDiv" tabIndex={0} onPaste={handleOnPaste} >
             {(props.empty === true)?<p>Your feed is empty</p>:""}
             {isMobile?
-                <Form action="/" onFinish={handleFinish}>
-                    <Input placeholder='Paste Here' value={textFieldValue} onChange={(e) => setTextFieldValue(e.currentTarget.value)}/>
-                </Form>
+      <form onSubmit={form.onSubmit((values) => handleFinish(values.text))}>
+      <Textarea {...form.getInputProps('text')}
+                        placeholder='Paste Here' 
+                    />
+                </form>
             :
                 <p>Click and paste content here</p>
             }

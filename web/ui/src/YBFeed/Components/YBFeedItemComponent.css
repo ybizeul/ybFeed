@@ -1,0 +1,17 @@
+DIV.heading {
+  /* border-bottom: solid darkgray 1px; */
+  border-bottom-style: solid;
+  border-bottom-width: 1px;
+  margin-bottom: 1em;
+  padding-bottom: 0.5em;
+}
+
+.itemContainer {
+    position: relative;
+}
+  
+.itemContainer button {
+    position: absolute;
+    top:0;
+    right: 0;
+}

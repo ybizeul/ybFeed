@@ -8,12 +8,12 @@ import (
 	"golang.org/x/exp/slog"
 )
 
-//go:embed build
+//go:embed dist
 var EMBED_UI embed.FS
 
 func GetUiFs() fs.FS {
 	//embedRoot, err := fs.Sub(EMBED_UI, "ui")
-	embedRoot, err := fs.Sub(EMBED_UI, "build")
+	embedRoot, err := fs.Sub(EMBED_UI, "dist")
 	if err != nil {
 		slog.Error("Unable to get root for web ui", slog.String("error", err.Error()))
 		os.Exit(1)

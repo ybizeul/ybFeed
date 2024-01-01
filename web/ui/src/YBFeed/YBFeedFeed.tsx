@@ -1,27 +1,25 @@
 import { useEffect, useState, useRef } from "react"
 
-import { useParams, useSearchParams } from 'react-router-dom';
-import { Navigate } from 'react-router-dom';
+import { useParams, useSearchParams, Navigate } from 'react-router-dom';
 
-import { Button, Form, Input, Dropdown, Space, Modal, Row, Col } from 'antd';
-import { message } from 'antd';
-import type { MenuProps } from 'antd';
+import { notifications } from '@mantine/notifications';
 
-import { FeedConnector, YBBreadCrumb, YBPasteCard, FeedItems, FeedItem, NotificationToggle } from '.'
+import { Menu, ActionIcon, PinInput, Text, Modal, Center, Group, rem} from '@mantine/core';
+
+import { YBFeedConnector, YBFeedItem } from '.'
+
+import { YBBreadCrumbComponent, YBPasteCardComponent, YBFeedItemsComponent, YBNotificationToggleComponent } from './Components'
+import { defaultNotificationProps } from './config';
 
 import {
-    LinkOutlined,
-    NumberOutlined,
-    DownOutlined
-  } from '@ant-design/icons';
+    IconLink, IconHash
+  } from '@tabler/icons-react';
 
-
-
-export function FeedComponent() {
+export function YBFeedFeed() {
     const feedParam: string = useParams().feed!
     const [searchParams] = useSearchParams()
     const [goTo,setGoTo] = useState<string|undefined>(undefined)
-    const feedItems = useRef<FeedItem[]>([])
+    const feedItems = useRef<YBFeedItem[]>([])
     const [secret,setSecret] = useState<string|null>(null)
     const [pinModalOpen,setPinModalOpen] = useState(false)
     const [authenticated,setAuthenticated] = useState<boolean|undefined>(undefined)
@@ -29,14 +27,16 @@ export function FeedComponent() {
     const [fatal, setFatal] = useState(null)
     const [vapid, setVapid] = useState<string|undefined>(undefined)
 
-    const connection = new FeedConnector()
+    const connection = new YBFeedConnector()
     //
     // Creating links to feed
     //
     const copyLink = () => {
         const link = window.location.href + "?secret=" + secret
         navigator.clipboard.writeText(link)
-        message.info('Link Copied!')
+        notifications.show({
+            message:'Link Copied!', ...defaultNotificationProps
+        })
     }
 
     //
@@ -52,15 +52,15 @@ export function FeedComponent() {
                 return
             }
             setFatal(null)
-            var do_update = false
+            let do_update = false
 
-            var found
+            let found
 
             // Loop over current items and keep what is already here
 
             const oldItems = []
             for (let i=0;i<feedItems.current.length;i++) {
-                var current_old_item = feedItems.current[i]
+                const current_old_item = feedItems.current[i]
                 found = false
                 for (let j=0;j<f.items.length;j++) {
                     const current_new_item = f.items[j]
@@ -78,7 +78,7 @@ export function FeedComponent() {
 
             // Loop over new items and add what is new
             for (let i=0;i<f.items.length;i++) {
-                var current_new_item = f.items[i]
+                const current_new_item = f.items[i]
                 found = false
                 for (let j=0;j<feedItems.current.length;j++) {
                     const current_existing_item = feedItems.current[j]
@@ -125,7 +125,11 @@ export function FeedComponent() {
                         update()
                     })
                     .catch((e) => {
-                        message.error(e.message)
+                        notifications.show({
+                            message:e.message,
+                            color: "red",
+                            ...defaultNotificationProps
+                        })
                         setAuthenticated(false)
                     })
             }
@@ -137,7 +141,7 @@ export function FeedComponent() {
             fetch("/api/feed/"+encodeURIComponent(feedParam),{cache: "no-cache"})
                 .then(r => {
                     if (r.status === 200) {
-                        var v = r.headers.get("Ybfeed-Vapidpublickey")
+                        const v = r.headers.get("Ybfeed-Vapidpublickey")
                         if (v) {
                             setVapid(v)
                         }
@@ -150,54 +154,30 @@ export function FeedComponent() {
         },[updateGeneration]
     )
 
-    const handleMenuClick: MenuProps['onClick'] = (e) => {
-        if (e.key === "1") {
-            copyLink()
-        } else if (e.key === "2") {
-            setPinModalOpen(true)
-        }
-    };
-
     const handlePinModalCancel = () => {
         setPinModalOpen(false)
     }
 
-    const items: MenuProps['items'] = [
-        {
-          label: 'Copy Permalink',
-          key: '1',
-          icon: <LinkOutlined />,
-        },
-        {
-          label: 'Set Temporary PIN',
-          key: '2',
-          icon: <NumberOutlined />,
-        },
-      ];
-      const menuProps = {
-        items,
-        onClick: handleMenuClick,
-      };
-      const setPIN = (e: any) => {
-        connection.SetPIN(feedParam,e.PIN)
-        .then((r) => {
-            message.info("PIN set")
+    const setPIN = (pin: string) => {
+        connection.SetPIN(feedParam,pin)
+        .then(() => {
+            notifications.show({message:"PIN set", ...defaultNotificationProps})
             setPinModalOpen(false)
         })
         .catch((e) => {
-            message.error(e.message)
+            notifications.show({message:e.message, color:"red", ...defaultNotificationProps})
             setPinModalOpen(false)
         })
-      }
-      const sendPIN = (e: any) => {
-        connection.AuthenticateFeed(feedParam,e.PIN)
-        .then((r) => {
+    }
+    const sendPIN = (e: string) => {
+        connection.AuthenticateFeed(feedParam,e)
+        .then(() => {
             update()
         })
         .catch((e) => {
-            message.error(e.message)
+            notifications.show({message:e.message, color:"red", ...defaultNotificationProps})
         })
-      }
+    }
 
     return (
         <>
@@ -205,99 +185,64 @@ export function FeedComponent() {
         <Navigate to={goTo} />
         :""}
         {authenticated===true?
-        <Space style={{float: 'right'}}>
+            <Group gap="xs" justify="flex-end" style={{float: 'right'}}>
             {vapid?
-            <NotificationToggle vapid={vapid} feedName={feedParam}/>
+            <YBNotificationToggleComponent vapid={vapid} feedName={feedParam}/>
             :""}
-            <Dropdown menu={menuProps}>
-                <Button>
-                    <Space>
-                        <LinkOutlined onClick={copyLink}/>
-                        <DownOutlined />
-                    </Space>
-                </Button>
-            </Dropdown>
-        </Space>
+            <Menu trigger="hover">
+                <Menu.Target>
+                    <ActionIcon size="md" variant="outline" aria-label="Menu" onClick={copyLink}>
+                        <IconLink style={{ width: '70%', height: '70%' }} stroke={1.5} />
+                    </ActionIcon>
+                </Menu.Target>
+                <Menu.Dropdown>
+                <Menu.Item leftSection={<IconLink style={{ width: rem(14), height: rem(14) }} />} onClick={copyLink}>
+                    Copy Permalink
+                </Menu.Item>
+                <Menu.Item leftSection={<IconHash style={{ width: rem(14), height: rem(14) }} />} onClick={() => setPinModalOpen(true)}>
+                    Set Temporary PIN
+                </Menu.Item>
+                </Menu.Dropdown>
+            </Menu>
+            </Group>
         :""}
 
-        <YBBreadCrumb />
-
+        <YBBreadCrumbComponent />
         {!fatal?
             <>
             {authenticated===true?
             <>
-            <Modal title="Set Temporary PIN" className="PINModal" open={pinModalOpen} footer={null} onCancel={handlePinModalCancel} destroyOnClose={true}>
+            <Modal title="Set Temporary PIN" className="PINModal" opened={pinModalOpen} onClose={handlePinModalCancel}>
                 <div className="text-center">
-                    Please choose a PIN, it wille expire after 2 minutes:
+                    Please choose a PIN, it will expire after 2 minutes:
                 </div>
-                <Row justify='center'>
-                        <Col>
-                                    <Form
-                    action="/"
-                    onFinish={setPIN}
-                    >
-                                <Form.Item
-                                    name="PIN"
-                                    rules={[{ required: true, type: 'string', len: 4, pattern: RegExp("[0-9]{4}"), validateTrigger:"onBlur" }]}
-                                    validateTrigger="onBlur"
-                                    className='pin-field'
-                                >
-                                <Input size="large" width={4} type="password" maxLength={4} placeholder="1234" prefix={<NumberOutlined />} />
-                                </Form.Item>
-                            </Form>
-                        </Col>
-                    </Row>
-
+                <Center>
+                <PinInput data-autofocus mt="1em" mb="1em" type="number" mask onComplete={(v) => { setPIN(v)}}/>
+                </Center>
             </Modal>
 
             <div className="pasteCard">
-                <YBPasteCard empty={feedItems.current.length === 0} onPaste={update}/>
+                <YBPasteCardComponent empty={feedItems.current.length === 0} onPaste={update}/>
             </div>
 
-            <FeedItems items={feedItems.current} onUpdate={update} onDelete={update}/>
+            <YBFeedItemsComponent items={feedItems.current} onUpdate={update} onDelete={update}/>
             
             </>
             :""}
 
             {authenticated===false?
             <>
-            <Row justify='center'>
-                <Col>
-                    <div className="text-center">
-                        <p>It doesn't look like you are authorized to view this feed.</p>
-                        <p>Would you like to authenticate with a PIN?</p>
-                    </div>
-                </Col>
-            </Row>
-            <Row justify='center'>
-                <Col>
-                    <Form
-                            onFinish={sendPIN}
-                            className='form-container'
-                            >
-                            <Form.Item
-                                name="PIN"
-                                rules={[{ required: true, type: 'string', len: 4, pattern: RegExp("[0-9]{4}"), validateTrigger:"onBlur" }]}
-                                validateTrigger="onBlur"
-                                >
-                            <Input 
-                                className="pin-field"
-                                size="large" 
-                                width={3} 
-                                type="password" 
-                                maxLength={4} 
-                                placeholder="1234" 
-                                prefix={<NumberOutlined />} />
-                            </Form.Item>
-                    </Form>
-                </Col>
-            </Row>
+            <Text mt="2em" ta="center">This feed is protected by a PIN.</Text>
+            <Center>
+                <PinInput mt="2em" type="number" mask onComplete={(v) => { sendPIN(v)}}/>
+            </Center>
             </>
             :""
             }
             </>
         :
             <p>{fatal}</p>
+        
         }   
         </>
     )

@@ -1,30 +1,34 @@
 import { useState, useEffect } from 'react'
 
-import { Button, message } from 'antd'
-
 import {
-    BellOutlined
-  } from '@ant-design/icons';
+    IconBell
+  } from '@tabler/icons-react';
 
-import { FeedConnector } from '.'
+import { ActionIcon } from '@mantine/core';
+
+import { notifications } from '@mantine/notifications';
+
+import { YBFeedConnector } from '../'
+
+import { defaultNotificationProps } from '../config';
 
 interface NotificationToggleProps {
     vapid: string
     feedName: string 
 }
 
-export function NotificationToggle(props:NotificationToggleProps) {
+export function YBNotificationToggleComponent(props:NotificationToggleProps) {
     const {vapid, feedName} = props
     const [notificationsOn,setNotificationsOn] = useState(false)
     const [loading,setLoading] = useState(false)
     const [canPushNotifications, setCanPushNotification] = useState(false)
 
-    async function subscribe(): Promise<Boolean> {
+    async function subscribe(): Promise<boolean> {
         return new Promise((resolve, reject) => {
             if (!vapid) {
                 reject("VAPID not declared")
             }
-            const connection = new FeedConnector()
+            const connection = new YBFeedConnector()
 
             navigator.serviceWorker.getRegistration(window.location.href)
                 .then(function(registration) {  
@@ -39,7 +43,7 @@ export function NotificationToggle(props:NotificationToggleProps) {
                 .then(function(subscription) {
                     if (subscription) {
                         connection.AddSubscription(feedName,JSON.stringify(subscription))
-                            .then((r) => {
+                            .then(() => {
                                 resolve(true)
                             })
                     }
@@ -47,7 +51,10 @@ export function NotificationToggle(props:NotificationToggleProps) {
                         reject("Unable to subscribe (empty subscription)")
                     }
                 })
-                .catch(err => console.error(err));
+                .catch((err) => {
+                    setLoading(false)
+                    notifications.show({title:"Error", message: err.message, color: "red", ...defaultNotificationProps})
+                });
         })
     }
     // async function unsubscribe(): Promise<Boolean> {
@@ -81,12 +88,12 @@ export function NotificationToggle(props:NotificationToggleProps) {
     //             .catch(err => console.error(err));
     //     })
     // }
-    async function unsubscribe(): Promise<Boolean> {
+    async function unsubscribe(): Promise<boolean> {
         return new Promise((resolve, reject) => {
             if (!vapid) {
                 reject("VAPID not declared")
             }
-            const connection = new FeedConnector()
+            const connection = new YBFeedConnector()
 
             navigator.serviceWorker.ready
                 .then(function(registration) {  
@@ -96,7 +103,7 @@ export function NotificationToggle(props:NotificationToggleProps) {
                     if (subscription) {
                         subscription.unsubscribe()
                         connection.RemoveSubscription(feedName,JSON.stringify(subscription))
-                            .then((r) => {
+                            .then(() => {
                                 resolve(true)
                             })
                     }
@@ -116,7 +123,7 @@ export function NotificationToggle(props:NotificationToggleProps) {
         return Uint8Array.from([...rawData].map(char => char.charCodeAt(0)));
     }
 
-    const toggleNotifications = (e: any) => {
+    const toggleNotifications = () => {
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.getRegistration(window.location.href)
                 .then(function(registration) {
@@ -145,7 +152,7 @@ export function NotificationToggle(props:NotificationToggleProps) {
                                 .catch(e => {
                                     setLoading(false)
                                     console.log(e)
-                                    message.error("Error")
+                                    notifications.show({message:"Error", color:"red", ...defaultNotificationProps})
                                 })
                         }
                     }
@@ -161,7 +168,7 @@ export function NotificationToggle(props:NotificationToggleProps) {
                             .catch(e => {
                                 setLoading(false)
                                 console.log(e)
-                                message.error("Error")
+                                notifications.show({message:"Error", color:"red", ...defaultNotificationProps})
                             })
                     }
                 });
@@ -193,12 +200,14 @@ export function NotificationToggle(props:NotificationToggleProps) {
     return(
         <>
         {canPushNotifications?
-        <Button 
-            type={notificationsOn?"primary":"default"}
-            loading={loading}
-            icon={<BellOutlined/>}
+        <ActionIcon
+            size="md" 
+            variant={notificationsOn?"filled":"outline"}
+            aria-label="Settings"
             onClick={toggleNotifications}
-        />
+            loading={loading}>
+            <IconBell style={{ width: '70%', height: '70%' }} stroke={1.5} />
+        </ActionIcon>
         :""}
         </>
     )

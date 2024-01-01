@@ -1,37 +1,13 @@
-export * from './YBBreadCrumbComponent'
-export * from './YBPasteCardComponent'
-export * from './YBFeedItemsComponent'
-export * from './YBFeedItemComponent'
-export * from './YBFeedComponent'
-export * from './YBNotificationToggle'
+export * from './YBFeedApp'
+export * from './YBFeed'
+export * from './YBFeedItem'
 
-export interface FeedItem {
-    name: string,
-    date: string,
-    type: number,
-    feed: Feed
-}
-
-export interface Feed {
-    name: string,
-    secret: string,
-    items: FeedItem[],
-}
-
-interface YBFeedError {
-    status: number
-}
-class YBFeedError extends Error {
-    constructor(status: number, message?:string) {
-        super(message);
-        this.status = status
-    }
-}
-export class FeedConnector {
+import { YBFeed, YBFeedItem, YBFeedError } from '.'
+export class YBFeedConnector {
     feedUrl(feedName: string): string {
         return "/api/feed/"+encodeURIComponent(feedName)
     }
-    async GetFeed(feedName: string): Promise<Feed|null> { 
+    async GetFeed(feedName: string): Promise<YBFeed|null> { 
         return new Promise((resolve, reject) => {
             fetch(this.feedUrl(feedName),{
                     credentials: "include"
@@ -45,13 +21,13 @@ export class FeedConnector {
                 }
                 f.json()
                 .then(j => {
-                    for (var i=0;i<j.items.length;i++) {
+                    for (let i=0;i<j.items.length;i++) {
                         j.items[i].feed = j
                     }
                     resolve(j)
                 })
                 .catch((e) => {
-                    reject(new YBFeedError(f.status, "Server Unavailable"))
+                    reject(new YBFeedError(e.status, "Server Unavailable"))
                 })
             })
             .catch((e) => {
@@ -70,7 +46,7 @@ export class FeedConnector {
                     .then(text => {
                         reject(new YBFeedError(f.status, text))
                     })
-                    .catch((e) => {
+                    .catch(() => {
                         reject(new YBFeedError(f.status, "Server Unavailable"))
                     })
                 } else {
@@ -79,7 +55,7 @@ export class FeedConnector {
             })
         })
     }
-    async GetItem(item: FeedItem): Promise<string> {
+    async GetItem(item: YBFeedItem): Promise<string> {
         return new Promise((resolve, reject) => {
             fetch(this.feedUrl(item.feed.name)+"/"+item.name,{
                 credentials: "include"
@@ -98,7 +74,7 @@ export class FeedConnector {
             })
         })
     }
-    async DeleteItem(item: FeedItem) {
+    async DeleteItem(item: YBFeedItem) {
         return new Promise((resolve, reject) => {
             fetch(this.feedUrl(item.feed.name)+"/"+encodeURIComponent(item.name),{
                 method: "DELETE",
@@ -110,7 +86,7 @@ export class FeedConnector {
                     .then(text => {
                         reject(new YBFeedError(f.status, text))
                     })
-                    .catch((e) => {
+                    .catch(() => {
                         reject(new YBFeedError(f.status, "Server Unavailable"))
                     })
                 } else {
@@ -131,7 +107,7 @@ export class FeedConnector {
                     f.text().then((b) => {
                         reject(new YBFeedError(f.status, b))
                     })
-                    .catch((e) => {
+                    .catch(() => {
                         reject(new YBFeedError(f.status, "Server Unavailable"))
                     })
                 }
@@ -142,6 +118,7 @@ export class FeedConnector {
             })
         })
     }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     async AddSubscription(feedName: string, subscription: any): Promise<boolean> {
         return new Promise((resolve, reject) => {
             fetch(this.feedUrl(feedName)+"/subscription",{
@@ -154,7 +131,7 @@ export class FeedConnector {
                     f.text().then((b) => {
                         reject(new YBFeedError(f.status, b))
                     })
-                    .catch((e) => {
+                    .catch(() => {
                         reject(new YBFeedError(f.status, "Server Unavailable"))
                     })
                 }
@@ -165,6 +142,7 @@ export class FeedConnector {
             })
         })
     }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     async RemoveSubscription(feedName: string, subscription: any): Promise<boolean> {
         return new Promise((resolve, reject) => {
             fetch(this.feedUrl(feedName)+"/subscription",{
@@ -177,7 +155,7 @@ export class FeedConnector {
                     f.text().then((b) => {
                         reject(new YBFeedError(f.status, b))
                     })
-                    .catch((e) => {
+                    .catch(() => {
                         reject(new YBFeedError(f.status, "Server Unavailable"))
                     })
                 }

@@ -1,113 +1,42 @@
-.form-container {
-  display: flex;
-  flex-direction: column;
-  align-items:normal;
-}
-
-.form-container-center {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.input-field {
-  width: 100%;
-  margin-bottom: 10px;
-}
-
-.pin-field {
-  width: 7em;
-}
-DIV.item {
-  margin-top: 3em;
-  margin-bottom: 3em;
-}
-/* #root div.ant-layout {
-  background-color: rgb(245,245,245);
-} */
-DIV.heading {
-  /* border-bottom: solid darkgray 1px; */
-  border-bottom-style: solid;
-  border-bottom-width: 1px;
-  margin-bottom: 1em;
-  padding-bottom: 0.5em;
-}
-
-DIV.center, .text-center {
+#root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
   text-align: center;
 }
 
-.ant-layout-content {
-  padding-top: 2em;
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
 }
 
-.pasteDiv {
-  margin-top: 2em;
-  text-align: center;
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
+}
+
+.card {
   padding: 2em;
-  border: 1px solid #BBB;
-  border-radius: 5px;
-}
-.pasteDiv:focus-within  {
-  background-color: rgb(221, 221, 221);
-};
-
-.PINModal {
-  text-align: center;
 }
 
-.itemText {
-  overflow:hidden;
-}
-
-.itemText pre {
-  padding-bottom: 1em;
-}
-
-.itemImg {
-  max-width: 100%;
-  text-align: center;
-}
-
-DIV.App > DIV.ant-layout {
-  height: 100%;
-}
-
-.itemContainer {
-  position: relative;
-}
-
-#root .itemContainer button {
-  position: absolute;
-  top: 0.5rem;
-  right: 0.5rem;
-}
-
-@media (prefers-color-scheme: dark) {
-  html {
-    color: rgba(255,255,255,0.82)
-  }
-  .pasteDiv:focus-within  {
-    background-color: rgb(40,40,40);
-  };
-  /* #root a, #root p, #root .ant-breadcrumb-separator, #root .ant-breadcrumb-link {
-    color: rgba(255,255,255,0.82)
-  }
-  #root div.ant-layout {
-    background-color: rgb(42, 42, 42);
-  }
-  #root button,
-  #root .ant-dropdown,
-  #root .ant-dropdown-menu,
-  #root .ant-dropdown-menu-item,
-  #root .ant-dropdown-menu-title-content {
-    background-color: rgb(64, 64, 64);
-    color: rgba(255,255,255,0.82)
-  }
-  #root .anticon {
-    color: rgba(255,255,255,0.82)
-  }
-  #root ant-dropdown {
-
-  } */
+.read-the-docs {
+  color: #888;
 }

@@ -1,0 +1,11 @@
+.pasteDiv {
+    margin-top: 2em;
+    margin-bottom: 2em;
+    text-align: center;
+    padding: 2em;
+    border: 1px solid #BBB;
+    border-radius: 5px;
+}
+.pasteDiv:focus-within  {
+    background-color: rgb(221, 221, 221);
+};
