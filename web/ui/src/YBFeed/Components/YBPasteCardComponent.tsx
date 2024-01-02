@@ -1,9 +1,9 @@
 import { useState,useEffect } from 'react'
 
-import { Textarea } from '@mantine/core';
-
-import { useForm } from '@mantine/form';
 import { useParams } from 'react-router-dom'
+
+import { Textarea } from '@mantine/core';
+import { useForm } from '@mantine/form';
 
 import './YBPasteCardComponent.css'
 
@@ -20,6 +20,7 @@ export function YBPasteCardComponent(props:YBPasteCardComponentProps) {
           text: '',
         },
     })
+
     //
     // Pasting Data
     //
@@ -58,6 +59,7 @@ export function YBPasteCardComponent(props:YBPasteCardComponentProps) {
             props.onPaste()
           })
     }
+
     const handleFinish = (text:string) => {
         const requestHeaders: HeadersInit = new Headers();
         requestHeaders.set("Content-Type", "text/plain")
@@ -71,6 +73,7 @@ export function YBPasteCardComponent(props:YBPasteCardComponentProps) {
             form.setFieldValue("text","")
         })
     }
+
     useEffect(() => {
         const handleResize = () => {
             setIsMobile(window.innerWidth <= 734); // Adjust the breakpoint as needed
@@ -89,13 +92,11 @@ export function YBPasteCardComponent(props:YBPasteCardComponentProps) {
         <div id="pasteCard" className="pasteDiv" tabIndex={0} onPaste={handleOnPaste} >
             {(props.empty === true)?<p>Your feed is empty</p>:""}
             {isMobile?
-      <form onSubmit={form.onSubmit((values) => handleFinish(values.text))}>
-      <Textarea {...form.getInputProps('text')}
-                        placeholder='Paste Here' 
-                    />
-                </form>
+            <form onSubmit={form.onSubmit((values) => handleFinish(values.text))}>
+            <Textarea {...form.getInputProps('text')} placeholder='Paste Here' />
+            </form>
             :
-                <p>Click and paste content here</p>
+            <p>Click and paste content here</p>
             }
         </div>
     )

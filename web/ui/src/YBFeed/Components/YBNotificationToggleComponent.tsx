@@ -1,11 +1,7 @@
 import { useState, useEffect } from 'react'
 
-import {
-    IconBell
-  } from '@tabler/icons-react';
-
 import { ActionIcon } from '@mantine/core';
-
+import { IconBell } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 
 import { YBFeedConnector } from '../'
@@ -57,37 +53,7 @@ export function YBNotificationToggleComponent(props:NotificationToggleProps) {
                 });
         })
     }
-    // async function unsubscribe(): Promise<Boolean> {
-    //     return new Promise((resolve, reject) => {
-    //         if (!vapid) {
-    //             reject("VAPID not declared")
-    //         }
-    //         const connection = new FeedConnector()
-
-    //         navigator.serviceWorker.ready
-    //             .then(function(registration) {
-    //                 registration.pushManager.getSubscription()
-    //                     .then(function(subscription) {
-    //                         if (subscription) {
-    //                             subscription.unsubscribe()
-    //                                 .then(b => {
-    //                                     connection.RemoveSubscription(feedName,JSON.stringify(subscription))
-    //                                         .then((r) => {
-    //                                             registration.unregister()
-    //                                                 .then(b => {
-    //                                                     resolve(true)
-    //                                                 })
-    //                                         })
-    //                                 })
-    //                         }
-    //                         else {
-    //                             reject("Unable to unsubscribe (empty subscription)")
-    //                         }
-    //                     })
-    //             })
-    //             .catch(err => console.error(err));
-    //     })
-    // }
+    
     async function unsubscribe(): Promise<boolean> {
         return new Promise((resolve, reject) => {
             if (!vapid) {
@@ -114,6 +80,7 @@ export function YBNotificationToggleComponent(props:NotificationToggleProps) {
                 .catch(err => console.error(err));
         })
     }
+    
     function urlBase64ToUint8Array(base64String: string) {
         const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
         const base64 = (base64String + padding)
