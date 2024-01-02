@@ -36,7 +36,7 @@ export function YBFeedHome() {
         <Text ta="center">Choose a unique name for your feed :</Text>
         <form onSubmit={form.onSubmit((values) => handleFinish(values.feedName))}>
         <Container size="200">
-            <TextInput mt="1em" size="xs" {...form.getInputProps('feedName')}/>
+            <TextInput mt="1em" size="xs" autoCapitalize='none' {...form.getInputProps('feedName')}/>
         </Container>
         </form>
         </>
