@@ -8,7 +8,7 @@ import { Menu, ActionIcon, PinInput, Text, Modal, Center, Group, rem} from '@man
 
 import { YBFeedConnector, YBFeedItem } from '.'
 
-import { YBBreadCrumbComponent, YBPasteCardComponent, YBFeedItemsComponent, YBNotificationToggleComponent } from './Components'
+import { YBBreadCrumbComponent, YBPasteCardComponent, YBFeedItemsComponent, YBNotificationToggleComponent, YBFeedItemComponent } from './Components'
 import { defaultNotificationProps } from './config';
 
 import {
@@ -208,6 +208,7 @@ export function YBFeedFeed() {
         :""}
 
         <YBBreadCrumbComponent />
+        {(authenticated==undefined)?<YBFeedItemComponent/>:""}
         {!fatal?
             <>
             {authenticated===true?
@@ -221,12 +222,9 @@ export function YBFeedFeed() {
                 </Center>
             </Modal>
 
-            <div className="pasteCard">
-                <YBPasteCardComponent empty={feedItems.current.length === 0} onPaste={update}/>
-            </div>
+            <YBPasteCardComponent empty={feedItems.current.length === 0} onPaste={update}/>
 
             <YBFeedItemsComponent items={feedItems.current} onUpdate={update} onDelete={update}/>
-            
             </>
             :""}
 
@@ -237,8 +235,7 @@ export function YBFeedFeed() {
                 <PinInput mt="2em" type="number" mask onComplete={(v) => { sendPIN(v)}}/>
             </Center>
             </>
-            :""
-            }
+            :""}
             </>
         :
             <p>{fatal}</p>

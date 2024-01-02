@@ -15,8 +15,8 @@ export function YBFeedItemsComponent(props: YBFeedItemsComponentProps) {
     return(
         <>
         {items.map((f:YBFeedItem) =>
-        <FeedItemContext.Provider value={f}>
-            <YBFeedItemComponent onUpdate={(f) => { if (onUpdate) { onUpdate(f)}}} onDelete={props.onDelete} key={f.name}/>
+        <FeedItemContext.Provider value={f} key={f.name}>
+            <YBFeedItemComponent onUpdate={(f) => { if (onUpdate) { onUpdate(f)}}} onDelete={props.onDelete} />
         </FeedItemContext.Provider>
         )}
         </>

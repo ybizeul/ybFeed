@@ -2,7 +2,7 @@ import { useState,useEffect } from 'react'
 
 import { useParams } from 'react-router-dom'
 
-import { Textarea } from '@mantine/core';
+import { Textarea, Paper, Center } from '@mantine/core';
 import { useForm } from '@mantine/form';
 
 import './YBPasteCardComponent.css'
@@ -13,6 +13,7 @@ interface YBPasteCardComponentProps {
 }
 
 export function YBPasteCardComponent(props:YBPasteCardComponentProps) {
+    const [isActive,setActive] = useState(false)
     const [isMobile, setIsMobile] = useState(false)
     const {feed} = useParams()
     const form = useForm({
@@ -89,15 +90,21 @@ export function YBPasteCardComponent(props:YBPasteCardComponentProps) {
     }, []);
 
     return (
-        <div id="pasteCard" className="pasteDiv" tabIndex={0} onPaste={handleOnPaste} >
+        <Paper shadow="xs" p="sm" mb="1em" mt="2em" withBorder tabIndex={0} onPaste={handleOnPaste}
+            style={{backgroundColor:(isActive)?"var(--mantine-color-gray-9)":"var(--mantine-color-gray-10)"}}
+                onFocus={() => setActive(true)} onBlur={() => setActive(false)}
+        >
+            <Center>
             {(props.empty === true)?<p>Your feed is empty</p>:""}
             {isMobile?
-            <form onSubmit={form.onSubmit((values) => handleFinish(values.text))}>
-            <Textarea {...form.getInputProps('text')} placeholder='Paste Here' />
+            <form style={{width:"100%"}} onSubmit={form.onSubmit((values) => handleFinish(values.text))} >
+            <Textarea ta="center" pt="1em" variant="unstyled" {...form.getInputProps('text')} placeholder='Paste Here'
+            style={{textAlign:"center", textAlignLast: "center", color: "transparent", textShadow: "0px 0px 0px tomato;", caretColor:"transparent"}} />
             </form>
             :
             <p>Click and paste content here</p>
             }
-        </div>
+            </Center>
+        </Paper>
     )
 }
