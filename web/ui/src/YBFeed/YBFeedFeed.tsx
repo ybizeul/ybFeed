@@ -189,7 +189,7 @@ export function YBFeedFeed() {
             {vapid?
             <YBNotificationToggleComponent vapid={vapid} feedName={feedParam}/>
             :""}
-            <Menu trigger="hover">
+            <Menu trigger="hover" position="bottom-end" withArrow arrowPosition="center">
                 <Menu.Target>
                     <ActionIcon size="md" variant="outline" aria-label="Menu" onClick={copyLink}>
                         <IconLink style={{ width: '70%', height: '70%' }} stroke={1.5} />
