@@ -2,7 +2,7 @@ import { useState,useEffect } from 'react'
 
 import { useParams } from 'react-router-dom'
 
-import { Textarea, Paper, Center, useComputedColorScheme, useMantineTheme } from '@mantine/core';
+import { Textarea, Paper, Center, Text, useComputedColorScheme, useMantineTheme } from '@mantine/core';
 import { useForm } from '@mantine/form';
 
 import './YBPasteCardComponent.css'
@@ -107,18 +107,18 @@ export function YBPasteCardComponent(props:YBPasteCardComponentProps) {
 
     return (
         <Paper shadow="xs" p="sm" mb="1em" mt="2em" withBorder tabIndex={0} onPaste={handleOnPaste}
-            style={{backgroundColor:(isActive)?activeColor:inactiveColor}}
+            style={{backgroundColor:(isActive)?activeColor:inactiveColor, height: "8em"}}
                 onFocus={() => setActive(true)} onBlur={() => setActive(false)}
         >
-            <Center>
-            {(props.empty === true)?<p>Your feed is empty</p>:""}
+            <Center h="100%" style={{ flexDirection:"column"}}>
+            {(props.empty === true)?<Text>Your feed is empty.</Text>:""}
             {isMobile?
             <form style={{width:"100%"}} onSubmit={form.onSubmit((values) => handleFinish(values.text))} >
             <Textarea ta="center" pt="1em" variant="unstyled" {...form.getInputProps('text')} placeholder='Paste Here'
             style={{textAlign:"center", textAlignLast: "center", color: "transparent", textShadow: "0px 0px 0px tomato;", caretColor:"transparent"}} />
             </form>
             :
-            <p>Click and paste content here</p>
+            <Text>Click and paste content here</Text>
             }
             </Center>
         </Paper>
