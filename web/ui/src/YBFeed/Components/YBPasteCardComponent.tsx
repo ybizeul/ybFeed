@@ -2,7 +2,7 @@ import { useState,useEffect } from 'react'
 
 import { useParams } from 'react-router-dom'
 
-import { Textarea, Paper, Center } from '@mantine/core';
+import { Textarea, Paper, Center, useComputedColorScheme, useMantineTheme } from '@mantine/core';
 import { useForm } from '@mantine/form';
 
 import './YBPasteCardComponent.css'
@@ -13,9 +13,14 @@ interface YBPasteCardComponentProps {
 }
 
 export function YBPasteCardComponent(props:YBPasteCardComponentProps) {
+    const theme = useMantineTheme()
     const [isActive,setActive] = useState(false)
     const [isMobile, setIsMobile] = useState(false)
     const {feed} = useParams()
+    const colorScheme = useComputedColorScheme('light');
+    const [activeColor,setActiveColor] = useState(theme.colors.gray[1])
+    const [inactiveColor,setInactiveColor] = useState(theme.colors.gray[2])
+
     const form = useForm({
         initialValues: {
           text: '',
@@ -89,9 +94,20 @@ export function YBPasteCardComponent(props:YBPasteCardComponentProps) {
         };
     }, []);
 
+    useEffect(() => {
+        if (colorScheme === 'light') {
+            setActiveColor(theme.colors.gray[2])
+            setInactiveColor(theme.colors.gray[1])
+        }
+        else {
+            setActiveColor(theme.colors.gray[8])
+            setInactiveColor(theme.colors.gray[9])
+        }
+    },[colorScheme,theme.colors.gray])
+
     return (
         <Paper shadow="xs" p="sm" mb="1em" mt="2em" withBorder tabIndex={0} onPaste={handleOnPaste}
-            style={{backgroundColor:(isActive)?"var(--mantine-color-gray-9)":"var(--mantine-color-gray-10)"}}
+            style={{backgroundColor:(isActive)?activeColor:inactiveColor}}
                 onFocus={() => setActive(true)} onBlur={() => setActive(false)}
         >
             <Center>
