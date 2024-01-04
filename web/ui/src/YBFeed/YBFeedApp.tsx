@@ -1,6 +1,5 @@
-import { AppShell, Container, Text } from "@mantine/core"
+import { AppShell, Container } from "@mantine/core"
 
-import { useEffect, useState } from "react";
 import {
     createBrowserRouter,
     RouterProvider,
@@ -8,6 +7,7 @@ import {
 
 import { YBFeedHome } from "./YBFeedHome";
 import { YBFeedFeed } from './YBFeedFeed'
+import { YBFeedVersionComponent } from "./Components";
 
 const router = createBrowserRouter([
     {
@@ -22,17 +22,6 @@ const router = createBrowserRouter([
 
 
 export function YBFeedApp() {
-    const [version, setVersion] = useState("unknown")
-    useEffect(() => {
-        fetch("/api")
-        .then(r => {
-            const v = r.headers.get("Ybfeed-Version")
-            if (v !== null) {
-                setVersion(v)
-            }
-        })
-    })
-    //const pinned = useHeadroom({ fixedAt: 120 });
     return (
         <AppShell withBorder={false} >
             <AppShell.Main>
@@ -40,8 +29,8 @@ export function YBFeedApp() {
                     <RouterProvider router={router} />
                 </Container>
             </AppShell.Main>
-            <AppShell.Footer style={{backgroundColor: "rgba(0,0,0,0)"}}>
-                <Text mb="1em" size="xs" ta="center">ybFeed {version}</Text>
+            <AppShell.Footer style={{backgroundColor:"transparent"}} zIndex={100}>
+                <YBFeedVersionComponent/>
             </AppShell.Footer>
         </AppShell>
     )

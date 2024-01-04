@@ -240,7 +240,7 @@ export function YBFeedFeed() {
         :
             <p>{fatal}</p>
         
-        }   
+        }
         </>
     )
 }

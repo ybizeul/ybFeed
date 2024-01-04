@@ -1,4 +1,6 @@
 import { createContext } from 'react'
+import { Space } from "@mantine/core"
+
 import { YBFeedItemComponent } from '.'
 import { YBFeedItem } from '../'
 
@@ -19,6 +21,7 @@ export function YBFeedItemsComponent(props: YBFeedItemsComponentProps) {
             <YBFeedItemComponent onUpdate={(f) => { if (onUpdate) { onUpdate(f)}}} onDelete={props.onDelete} />
         </FeedItemContext.Provider>
         )}
+        <Space h="md" />
         </>
     )
 }
