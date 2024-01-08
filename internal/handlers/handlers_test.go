@@ -505,7 +505,8 @@ func TestSubscribeFeedNotifications(t *testing.T) {
 	b := bytes.NewBuffer([]byte(body))
 
 	t.Cleanup(func() {
-		f, _ := feed.GetFeed(path.Join(baseDir, dataDir, testFeedName))
+		fm := feed.NewFeedManager(path.Join(baseDir, dataDir), nil)
+		f, _ := fm.GetFeed(testFeedName)
 		f.Config.Subscriptions = []webpush.Subscription{}
 		_ = f.Config.Write()
 	})
@@ -521,7 +522,9 @@ func TestSubscribeFeedNotifications(t *testing.T) {
 	if res.StatusCode != 200 {
 		t.Errorf("Expected 200 but got %d", res.StatusCode)
 	}
-	f, err := feed.GetFeed(path.Join(baseDir, dataDir, testFeedName))
+
+	fm := feed.NewFeedManager(path.Join(baseDir, dataDir), nil)
+	f, err := fm.GetFeed(testFeedName)
 
 	if err != nil {
 		t.Error(err)
