@@ -59,17 +59,20 @@ func (feed *Feed) Name() string {
 	return path.Base(feed.Path)
 }
 func (feed *Feed) GetPublicItem(i string) (*PublicFeedItem, error) {
-	feedLog := slog.Default().With(slog.String("feed", feed.Name()))
 
 	s, err := os.Stat(path.Join(feed.Path, i))
 
 	if err != nil {
-		code := 500
-		e := "Unable to read file info"
-
-		feedLog.Error(e, slog.Int("return", code))
-
-		return nil, err
+		if os.IsNotExist(err) {
+			return nil, &FeedError{
+				Code:    404,
+				Message: fmt.Sprintf("Feed does not exists (%s)", feed.Name()),
+			}
+		}
+		return nil, &FeedError{
+			Code:    500,
+			Message: fmt.Sprintf("Unable to open feed (%s)", feed.Name()),
+		}
 	}
 
 	var itemType FeedItemType
@@ -214,7 +217,7 @@ func (f *Feed) AddItem(contentType string, r io.ReadCloser) error {
 	publicItem, err := f.GetPublicItem(filename + "." + ext)
 
 	if err != nil {
-		return err.(*FeedError)
+		return err
 	}
 
 	if err = f.WebSocketManager.NotifyAdd(publicItem); err != nil {
@@ -235,10 +238,7 @@ func (f *Feed) RemoveItem(item string) error {
 
 	publicItem, err := f.GetPublicItem(item)
 	if err != nil {
-		return &FeedError{
-			Code:    500,
-			Message: err.Error(),
-		}
+		return err
 	}
 
 	err = os.Remove(itemPath)
