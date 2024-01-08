@@ -66,7 +66,10 @@ func FeedConfigForFeed(f *Feed) (*FeedConfig, error) {
 
 	configPath := path.Join(f.Path, "config.json")
 	if _, err := os.Stat(configPath); errors.Is(err, os.ErrNotExist) {
-		result.migratev1v2()
+		if err := result.migratev1v2(); err != nil {
+			return nil, err
+		}
+
 	}
 	b, err := os.ReadFile(configPath)
 	if err != nil {

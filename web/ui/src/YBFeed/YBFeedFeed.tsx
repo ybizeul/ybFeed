@@ -19,13 +19,14 @@ export function YBFeedFeed() {
     const feedParam: string = useParams().feed!
     const [searchParams] = useSearchParams()
     const [goTo,setGoTo] = useState<string|undefined>(undefined)
-    const feedItems = useRef<YBFeedItem[]>([])
     const [secret,setSecret] = useState<string|null>(null)
     const [pinModalOpen,setPinModalOpen] = useState(false)
     const [authenticated,setAuthenticated] = useState<boolean|undefined>(undefined)
     const [updateGeneration,setUpdateGeneration] = useState(0)
     const [fatal, setFatal] = useState(null)
     const [vapid, setVapid] = useState<string|undefined>(undefined)
+
+    const feedItems = useRef<YBFeedItem[]>([])
 
     const connection = new YBFeedConnector()
     //
@@ -48,7 +49,7 @@ export function YBFeedFeed() {
         }
         connection.GetFeed(feedParam)
         .then((f) => {
-            if (f === null) {
+            if (f === null || f.items === undefined) {
                 return
             }
             setFatal(null)
@@ -98,9 +99,10 @@ export function YBFeedFeed() {
             if (do_update === true) {
                 setUpdateGeneration(updateGeneration+1)
             }
-
-            setSecret(f.secret)
-            setAuthenticated(true)
+            if (f.secret) {
+                setSecret(f.secret)
+                setAuthenticated(true)
+            }
         })
         .catch(e => {
             if (e.status === 401) {

@@ -18,6 +18,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/ybizeul/ybfeed/internal/feed"
 	"github.com/ybizeul/ybfeed/internal/utils"
+
 	"github.com/ybizeul/ybfeed/web/ui"
 )
 
@@ -29,6 +30,7 @@ var webUiHandler = http.FileServer(http.FS(ui.GetUiFs()))
 // index.html for proper react routing
 func RootHandlerFunc(w http.ResponseWriter, r *http.Request) {
 	slog.Default().WithGroup("http").Debug("Root request", slog.Any("request", r))
+
 	p := r.URL.Path
 
 	ui := ui.GetUiFs()
@@ -45,6 +47,7 @@ func RootHandlerFunc(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		slog.Error("Unable to get web ui fs", slog.String("error", err.Error()))
 	}
+
 	if len(matches) == 1 {
 		webUiHandler.ServeHTTP(w, r)
 		return
@@ -67,11 +70,13 @@ func RootHandlerFunc(w http.ResponseWriter, r *http.Request) {
 
 // Handle requests to /api
 type ApiHandler struct {
-	BasePath    string
-	Version     string
-	MaxBodySize int
-	Config      APIConfig
-	HttpPort    int
+	BasePath         string
+	Version          string
+	MaxBodySize      int
+	Config           APIConfig
+	HttpPort         int
+	WebSocketManager *feed.WebSocketManager
+	FeedManager      *feed.FeedManager
 }
 
 type APIConfig struct {
@@ -121,10 +126,15 @@ func NewApiHandler(basePath string) (*ApiHandler, error) {
 		}
 	}
 
+	ws := feed.WebSocketManager{}
 	result := &ApiHandler{
-		BasePath: basePath,
-		Config:   *config,
+		BasePath:         basePath,
+		Config:           *config,
+		FeedManager:      feed.NewFeedManager(basePath, &ws),
+		WebSocketManager: &ws,
 	}
+
+	ws.FeedManager = result.FeedManager
 
 	if err = result.WriteConfig(); err != nil {
 		return nil, err
@@ -165,6 +175,9 @@ func (api *ApiHandler) GetServer() *chi.Mux {
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	})
+
+	r.Mount("/ws/{feedName}", http.HandlerFunc(api.feedWSHandler))
+
 	r.Route("/api/feed", func(r chi.Router) {
 		r.Get("/{feedName}", api.feedHandlerFunc)
 		r.Post("/{feedName}", api.feedPostHandlerFunc)
@@ -187,6 +200,35 @@ func (api *ApiHandler) GetServer() *chi.Mux {
 	return r
 }
 
+func (api *ApiHandler) feedWSHandler(w http.ResponseWriter, r *http.Request) {
+
+	secret, _ := utils.GetSecret(r)
+
+	feedName, _ := url.QueryUnescape(chi.URLParam(r, "feedName"))
+
+	if feedName == "" {
+		utils.CloseWithCodeAndMessage(w, 500, "Unable to obtain feed name")
+	}
+
+	p, err := api.FeedManager.GetFeed(feedName)
+
+	if err != nil {
+		yberr := err.(*feed.FeedError)
+		utils.CloseWithCodeAndMessage(w, yberr.Code, yberr.Error())
+		return
+	}
+
+	err = p.IsSecretValid(secret)
+
+	if err != nil {
+		yberr := err.(*feed.FeedError)
+		utils.CloseWithCodeAndMessage(w, yberr.Code, yberr.Error())
+		return
+	}
+
+	api.WebSocketManager.RunSocketForFeed(feedName, w, r)
+}
+
 func (api *ApiHandler) feedHandlerFunc(w http.ResponseWriter, r *http.Request) {
 	slog.Default().WithGroup("http").Debug("Feed API request", slog.Any("request", r))
 
@@ -198,12 +240,12 @@ func (api *ApiHandler) feedHandlerFunc(w http.ResponseWriter, r *http.Request) {
 		utils.CloseWithCodeAndMessage(w, 500, "Unable to obtain feed name")
 	}
 
-	p, err := feed.GetFeed(path.Join(api.BasePath, feedName))
+	p, err := api.FeedManager.GetFeed(feedName)
 
 	if err != nil {
 		yberr := err.(*feed.FeedError)
 		if yberr.Code == 404 {
-			p, err = feed.NewFeed(api.BasePath, feedName)
+			p, err = api.FeedManager.NewFeed(feedName)
 			secret = p.Config.Secret
 			if err != nil {
 				yberr := err.(*feed.FeedError)
@@ -216,7 +258,7 @@ func (api *ApiHandler) feedHandlerFunc(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	result, err := feed.GetPublicFeed(api.BasePath, feedName, p.Config.Secret)
+	result, err := api.FeedManager.GetPublicFeed(feedName, p.Config.Secret)
 
 	if err != nil {
 		yberr := err.(*feed.FeedError)
@@ -266,7 +308,7 @@ func (api *ApiHandler) feedPatchHandlerFunc(w http.ResponseWriter, r *http.Reque
 	if feedName == "" {
 		utils.CloseWithCodeAndMessage(w, 500, "Unable to obtain feed name")
 	}
-	f, err := feed.GetFeed(path.Join(api.BasePath, feedName))
+	f, err := api.FeedManager.GetFeed(feedName)
 
 	if err != nil {
 		yberr := err.(*feed.FeedError)
@@ -312,7 +354,7 @@ func (api *ApiHandler) feedItemHandlerFunc(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	f, err := feed.GetFeed(path.Join(api.BasePath, feedName))
+	f, err := api.FeedManager.GetFeed(feedName)
 
 	if err != nil {
 		yberr := err.(*feed.FeedError)
@@ -333,7 +375,7 @@ func (api *ApiHandler) feedItemHandlerFunc(w http.ResponseWriter, r *http.Reques
 	if feedItem == "" {
 		utils.CloseWithCodeAndMessage(w, 500, "Unable to obtain feed item")
 	}
-	content, err := f.GetItem(feedItem)
+	content, err := f.GetItemData(feedItem)
 
 	if err != nil {
 		yberr := err.(*feed.FeedError)
@@ -355,7 +397,7 @@ func (api *ApiHandler) feedPostHandlerFunc(w http.ResponseWriter, r *http.Reques
 		utils.CloseWithCodeAndMessage(w, 500, "Unable to obtain feed name")
 	}
 
-	f, err := feed.GetFeed(path.Join(api.BasePath, feedName))
+	f, err := api.FeedManager.GetFeed(feedName)
 
 	if err != nil {
 		yberr := err.(*feed.FeedError)
@@ -409,7 +451,7 @@ func (api *ApiHandler) feedItemDeleteHandlerFunc(w http.ResponseWriter, r *http.
 		utils.CloseWithCodeAndMessage(w, 500, "Unable to obtain feed name")
 	}
 
-	f, err := feed.GetFeed(path.Join(api.BasePath, feedName))
+	f, err := api.FeedManager.GetFeed(feedName)
 
 	if err != nil {
 		yberr := err.(*feed.FeedError)
@@ -453,7 +495,7 @@ func (api *ApiHandler) feedSubscriptionHandlerFunc(w http.ResponseWriter, r *htt
 		utils.CloseWithCodeAndMessage(w, 500, "Unable to obtain feed name")
 	}
 
-	f, err := feed.GetFeed(path.Join(api.BasePath, feedName))
+	f, err := api.FeedManager.GetFeed(feedName)
 
 	if err != nil {
 		yberr := err.(*feed.FeedError)
@@ -506,7 +548,7 @@ func (api *ApiHandler) feedUnsubscribeHandlerFunc(w http.ResponseWriter, r *http
 		utils.CloseWithCodeAndMessage(w, 500, "Unable to obtain feed name")
 	}
 
-	f, err := feed.GetFeed(path.Join(api.BasePath, feedName))
+	f, err := api.FeedManager.GetFeed(feedName)
 
 	if err != nil {
 		yberr := err.(*feed.FeedError)

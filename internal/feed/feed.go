@@ -3,17 +3,14 @@ package feed
 import (
 	"fmt"
 	"io"
-	"io/fs"
 	"net/http"
 	"net/url"
 	"os"
 	"path"
 	"path/filepath"
-	"sort"
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"golang.org/x/exp/slog"
 )
 
@@ -46,8 +43,9 @@ type PublicFeed struct {
 // Feed is the internal representation of a Feed and contains all the
 // informations needed to perform its tasks
 type Feed struct {
-	Path   string
-	Config FeedConfig
+	Path             string
+	Config           FeedConfig
+	WebSocketManager *WebSocketManager
 }
 
 type PublicFeedItem struct {
@@ -57,141 +55,42 @@ type PublicFeedItem struct {
 	Feed *PublicFeed  `json:"-"`
 }
 
-func NewFeed(basePath string, feedName string) (*Feed, error) {
-	slog.Info("Creating new feed", slog.String("feed", feedName))
-	feedPath := path.Join(basePath, feedName)
-
-	_, err := os.Stat(feedPath)
-	if err == nil {
-		return nil, &FeedError{
-			Code:    400,
-			Message: "Feed already exists",
-		}
-	}
-
-	err = os.Mkdir(feedPath, 0700)
-	if err != nil {
-		slog.Error("Error creating feed directory", slog.String("feed", feedName), slog.String("directory", feedPath))
-		return nil, err
-	}
-
-	feed := Feed{
-		Path: feedPath,
-		Config: FeedConfig{
-			Secret: uuid.NewString(),
-		},
-	}
-
-	feed.Config.feed = &feed
-
-	err = feed.Config.Write()
-
-	if err != nil {
-		slog.Error("Unable to write config %s", err.Error())
-		return nil, err
-	}
-
-	return &feed, nil
-}
-func GetFeed(feedPath string) (*Feed, error) {
-	if _, err := os.Stat(feedPath); os.IsNotExist(err) {
-		return nil, &FeedError{
-			Code:    404,
-			Message: "Feed does not exists",
-		}
-	}
-
-	result := &Feed{Path: feedPath}
-
-	c, err := FeedConfigForFeed(result)
-	if err != nil {
-		return nil, &FeedError{
-			Code:    404,
-			Message: "Feed does not exists",
-		}
-	}
-	c.feed = result
-
-	result.Config = *c
-
-	return result, nil
-}
-
-func GetPublicFeed(basePath string, feedName string, secret string) (*PublicFeed, error) {
-	feedPath := path.Join(basePath, feedName)
-
-	feedLog := slog.Default().With(slog.String("feed", feedName))
-
-	feedLog.Debug("Getting feed", slog.Int("secret_len", len(secret)))
-
-	f, err := GetFeed(feedPath)
-
-	err = f.IsSecretValid(secret)
-
-	if err != nil {
-		return nil, err
-	}
-
-	publicFeed := &PublicFeed{
-		Name:   feedName,
-		Secret: f.Config.Secret,
-	}
-	var d []fs.DirEntry
-	if d, err = os.ReadDir(feedPath); err != nil {
-		code := 500
-		feedLog.Error("Unable to feed content", slog.Int("return", code))
-
-		return nil, &FeedError{
-			Code:    code,
-			Message: "Unable to open directory for read",
-		}
-	}
-
-	items := []PublicFeedItem{}
-	for _, f := range d {
-		if f.Name() == "secret" || f.Name() == "pin" || f.Name() == "config.json" {
-			continue
-		}
-		info, err := f.Info()
-		if err != nil {
-			code := 500
-			e := "Unable to read file info"
-
-			feedLog.Error(e, slog.Int("return", code))
-
-			return nil, &FeedError{
-				Code:    code,
-				Message: e,
-			}
-		}
-
-		var itemType FeedItemType
-		if strings.HasSuffix(f.Name(), ".txt") {
-			itemType = Text
-		} else if strings.HasSuffix(f.Name(), ".png") || strings.HasSuffix(f.Name(), ".jpg") {
-			itemType = Image
-		} else {
-			itemType = Binary
-		}
-		items = append(items, PublicFeedItem{
-			Name: f.Name(),
-			Date: info.ModTime(),
-			Type: itemType,
-			Feed: publicFeed,
-		})
-	}
-	sort.Slice(items, func(i, j2 int) bool {
-		return items[i].Date.After(items[j2].Date)
-	})
-
-	publicFeed.Items = items
-
-	return publicFeed, nil
-}
 func (feed *Feed) Name() string {
 	return path.Base(feed.Path)
 }
-func (feed *Feed) GetItem(item string) ([]byte, error) {
+func (feed *Feed) GetPublicItem(i string) (*PublicFeedItem, error) {
+	feedLog := slog.Default().With(slog.String("feed", feed.Name()))
+
+	s, err := os.Stat(path.Join(feed.Path, i))
+
+	if err != nil {
+		code := 500
+		e := "Unable to read file info"
+
+		feedLog.Error(e, slog.Int("return", code))
+
+		return nil, err
+	}
+
+	var itemType FeedItemType
+	if strings.HasSuffix(i, ".txt") {
+		itemType = Text
+	} else if strings.HasSuffix(i, ".png") || strings.HasSuffix(i, ".jpg") {
+		itemType = Image
+	} else {
+		itemType = Binary
+	}
+	return &PublicFeedItem{
+		Name: i,
+		Date: s.ModTime(),
+		Type: itemType,
+		Feed: &PublicFeed{
+			Name:   feed.Name(),
+			Secret: feed.Config.Secret,
+		},
+	}, nil
+}
+func (feed *Feed) GetItemData(item string) ([]byte, error) {
 	// Read item content
 	slog.Info("Getting Item", slog.String("feed", feed.Name()), slog.String("name", item))
 	var content []byte
@@ -241,8 +140,8 @@ func (feed *Feed) IsSecretValid(secret string) error {
 	return nil
 }
 
-func (feed *Feed) AddItem(contentType string, f io.ReadCloser) error {
-	slog.Debug("Adding Item", slog.String("feed", feed.Name()), slog.String("content-type", contentType))
+func (f *Feed) AddItem(contentType string, r io.ReadCloser) error {
+	slog.Debug("Adding Item", slog.String("feed", f.Name()), slog.String("content-type", contentType))
 	fileExtensions := map[string]string{
 		"image/png":  "png",
 		"image/jpeg": "jpg",
@@ -265,7 +164,7 @@ func (feed *Feed) AddItem(contentType string, f io.ReadCloser) error {
 		}
 	}
 
-	content, err := io.ReadAll(f)
+	content, err := io.ReadAll(r)
 	if err != nil {
 		_, ok := err.(*http.MaxBytesError)
 		if ok {
@@ -291,7 +190,7 @@ func (feed *Feed) AddItem(contentType string, f io.ReadCloser) error {
 	var filename string
 	for {
 		filename = fmt.Sprintf("%s %d", template, fileIndex)
-		matches, err := filepath.Glob(path.Join(feed.Path, filename) + ".*")
+		matches, err := filepath.Glob(path.Join(f.Path, filename) + ".*")
 		if err != nil {
 			return &FeedError{
 				Code:    500,
@@ -304,7 +203,7 @@ func (feed *Feed) AddItem(contentType string, f io.ReadCloser) error {
 		fileIndex++
 	}
 
-	err = os.WriteFile(path.Join(feed.Path, filename+"."+ext), content, 0600)
+	err = os.WriteFile(path.Join(f.Path, filename+"."+ext), content, 0600)
 	if err != nil {
 		return &FeedError{
 			Code:    500,
@@ -312,16 +211,37 @@ func (feed *Feed) AddItem(contentType string, f io.ReadCloser) error {
 		}
 	}
 
-	slog.Info("Added Item", slog.String("name", filename+"."+ext), slog.String("feed", feed.Path), slog.String("content-type", contentType))
+	publicItem, err := f.GetPublicItem(filename + "." + ext)
+
+	if err != nil {
+		return err.(*FeedError)
+	}
+
+	if err = f.WebSocketManager.NotifyAdd(publicItem); err != nil {
+		return &FeedError{
+			Code:    500,
+			Message: err.Error(),
+		}
+	}
+
+	slog.Info("Added Item", slog.String("name", filename+"."+ext), slog.String("feed", f.Path), slog.String("content-type", contentType))
 
 	return nil
 }
 
-func (feed *Feed) RemoveItem(item string) error {
-	slog.Debug("Remove Item", slog.String("name", item), slog.String("feed", feed.Path))
-	itemPath := path.Join(feed.Path, item)
+func (f *Feed) RemoveItem(item string) error {
+	slog.Debug("Remove Item", slog.String("name", item), slog.String("feed", f.Path))
+	itemPath := path.Join(f.Path, item)
 
-	err := os.Remove(itemPath)
+	publicItem, err := f.GetPublicItem(item)
+	if err != nil {
+		return &FeedError{
+			Code:    500,
+			Message: err.Error(),
+		}
+	}
+
+	err = os.Remove(itemPath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return &FeedError{
@@ -334,7 +254,15 @@ func (feed *Feed) RemoveItem(item string) error {
 			Message: err.Error(),
 		}
 	}
-	slog.Info("Removed Item", slog.String("name", item), slog.String("feed", feed.Name()))
+
+	if err = f.WebSocketManager.NotifyRemove(publicItem); err != nil {
+		return &FeedError{
+			Code:    500,
+			Message: err.Error(),
+		}
+	}
+
+	slog.Info("Removed Item", slog.String("name", item), slog.String("feed", f.Name()))
 	return nil
 }
 

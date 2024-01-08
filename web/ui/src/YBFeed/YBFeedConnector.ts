@@ -4,6 +4,7 @@ export class YBFeedConnector {
     feedUrl(feedName: string): string {
         return "/api/feed/"+encodeURIComponent(feedName)
     }
+
     async GetFeed(feedName: string): Promise<YBFeed|null> { 
         return new Promise((resolve, reject) => {
             fetch(this.feedUrl(feedName),{

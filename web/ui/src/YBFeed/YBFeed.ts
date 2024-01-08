@@ -8,8 +8,16 @@ export class YBFeedError extends Error {
     }
 }
 
-export interface YBFeed {
-    name: string,
-    secret: string,
-    items: YBFeedItem[],
+export class YBFeed {
+    name: string;
+    secret: string|undefined;
+    items: YBFeedItem[]|undefined;
+    constructor(name: string) {
+        this.name = name
+        this.items = undefined
+    }
+    webSocketUrl(): string {
+        const path = window.location.origin + "/ws/" + self.name
+        return path
+    }
 }
