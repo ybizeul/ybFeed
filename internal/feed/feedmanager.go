@@ -114,6 +114,10 @@ func (m *FeedManager) GetPublicFeed(feedName string, secret string) (*PublicFeed
 		Name:   feedName,
 		Secret: f.Config.Secret,
 	}
+	publicFeedNoItems := &PublicFeed{
+		Name:   feedName,
+		Secret: f.Config.Secret,
+	}
 	var d []fs.DirEntry
 	if d, err = os.ReadDir(feedPath); err != nil {
 		code := 500
@@ -155,7 +159,7 @@ func (m *FeedManager) GetPublicFeed(feedName string, secret string) (*PublicFeed
 			Name: f.Name(),
 			Date: info.ModTime(),
 			Type: itemType,
-			Feed: publicFeed,
+			Feed: publicFeedNoItems,
 		})
 	}
 	sort.Slice(items, func(i, j2 int) bool {

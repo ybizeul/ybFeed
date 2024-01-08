@@ -52,7 +52,7 @@ type PublicFeedItem struct {
 	Name string       `json:"name"`
 	Date time.Time    `json:"date"`
 	Type FeedItemType `json:"type"`
-	Feed *PublicFeed  `json:"-"`
+	Feed *PublicFeed  `json:"feed"`
 }
 
 func (feed *Feed) Name() string {

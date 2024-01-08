@@ -33,7 +33,7 @@ export class YBFeedConnector {
             })
         })
     }
-    async AuthenticateFeed(feedName: string, secret: string): Promise<boolean> {
+    async AuthenticateFeed(feedName: string, secret: string): Promise<boolean|YBFeedError> {
         return new Promise((resolve, reject) => {
             fetch(this.feedUrl(feedName)+"?secret="+encodeURIComponent(secret),{
                 credentials: "include"

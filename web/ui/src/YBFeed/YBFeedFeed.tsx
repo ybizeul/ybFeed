@@ -1,12 +1,14 @@
-import { useEffect, useState, useRef } from "react"
+import { useEffect, useState, useMemo } from "react"
 
 import { useParams, useSearchParams, Navigate } from 'react-router-dom';
+
+import useWebSocket, {ReadyState} from 'react-use-websocket';
 
 import { notifications } from '@mantine/notifications';
 
 import { Menu, ActionIcon, PinInput, Text, Modal, Center, Group, rem} from '@mantine/core';
 
-import { YBFeedConnector, YBFeedItem } from '.'
+import { YBFeed, YBFeedConnector, YBFeedItem } from '.'
 
 import { YBBreadCrumbComponent, YBPasteCardComponent, YBFeedItemsComponent, YBNotificationToggleComponent, YBFeedItemComponent } from './Components'
 import { defaultNotificationProps } from './config';
@@ -17,18 +19,21 @@ import {
 
 export function YBFeedFeed() {
     const feedParam: string = useParams().feed!
+
     const [searchParams] = useSearchParams()
     const [goTo,setGoTo] = useState<string|undefined>(undefined)
-    const [secret,setSecret] = useState<string|null>(null)
+    const [secret,setSecret] = useState<string>("")
     const [pinModalOpen,setPinModalOpen] = useState(false)
     const [authenticated,setAuthenticated] = useState<boolean|undefined>(undefined)
-    const [updateGeneration,setUpdateGeneration] = useState(0)
-    const [fatal, setFatal] = useState(null)
     const [vapid, setVapid] = useState<string|undefined>(undefined)
 
-    const feedItems = useRef<YBFeedItem[]>([])
+    const [feedItems, setFeedItems] = useState<YBFeedItem[]>([])
 
-    const connection = new YBFeedConnector()
+    const [fatal, setFatal] = useState(false)
+    const connection = useMemo(() => new YBFeedConnector(),[])
+
+    const { sendMessage, lastJsonMessage, readyState } = useWebSocket(window.location.origin + "/ws/" + feedParam,{queryParams:{"secret":secret}});
+
     //
     // Creating links to feed
     //
@@ -39,122 +44,184 @@ export function YBFeedFeed() {
             message:'Link Copied!', ...defaultNotificationProps
         })
     }
+    useEffect(() => {
+        const s=searchParams.get("secret")
+        if (s) {
+            setSecret(s)
+            connection.AuthenticateFeed(feedParam,secret)
+            .then(() => {
+                setGoTo("/" + feedParam)
+            })
+            .catch((e) => console.log(e))
+        }
+        else {
+            fetch("/api/feed/"+encodeURIComponent(feedParam),{cache: "no-cache"})
+            .then(r => {
+                if (r.status === 200) {
+                    const v = r.headers.get("Ybfeed-Vapidpublickey")
+                    if (v) {
+                        setVapid(v)
+                    }
+                }
+            })
+        }
+    },[feedParam,searchParams,setGoTo, secret,connection])
 
+    useEffect(() => {
+        // Get feed properties
+        connection.GetFeed(feedParam)
+        .then((f): void => {
+            if (f?.secret) {
+                setSecret(f.secret)
+            }
+        })
+    })
     //
     // Update feed is run every 2s or o, some events
     //
     function update() {
-        if (feedParam === undefined) {
-            return
-        }
-        connection.GetFeed(feedParam)
-        .then((f) => {
-            if (f === null || f.items === undefined) {
-                return
-            }
-            setFatal(null)
-            let do_update = false
-
-            let found
-
-            // Loop over current items and keep what is already here
-
-            const oldItems = []
-            for (let i=0;i<feedItems.current.length;i++) {
-                const current_old_item = feedItems.current[i]
-                found = false
-                for (let j=0;j<f.items.length;j++) {
-                    const current_new_item = f.items[j]
-                    if (current_new_item.name === current_old_item.name) {
-                        found = true
-                        oldItems.push(feedItems.current[i])
-                    }
-                }
-                if (found === false) {
-                    do_update = true
-                }
-            }
-            feedItems.current.length = 0
-            feedItems.current = [...oldItems]
-
-            // Loop over new items and add what is new
-            for (let i=0;i<f.items.length;i++) {
-                const current_new_item = f.items[i]
-                found = false
-                for (let j=0;j<feedItems.current.length;j++) {
-                    const current_existing_item = feedItems.current[j]
-                    if (current_existing_item.name === current_new_item.name) {
-                        found = true
-                    }
-                }
-                if (found === false) {
-                    feedItems.current.push(f.items[i])
-                    do_update=true
-                }
-            }
-
-            feedItems.current.sort((a,b) =>{
-                return (a.date < b.date)?1:-1
-            })
-            if (do_update === true) {
-                setUpdateGeneration(updateGeneration+1)
-            }
-            if (f.secret) {
-                setSecret(f.secret)
-                setAuthenticated(true)
-            }
-        })
-        .catch(e => {
-            if (e.status === 401) {
-                setAuthenticated(false)
-            } else if (e.status === 500) {
-                setFatal(e.message)
-            }
-        })
+        sendMessage("feed")
     }
+    useEffect(() => {
+        if (readyState === ReadyState.OPEN) {
+            setFatal(false)
+            console.log("sending message feed")
+            sendMessage("feed")
+        }
+        else if (readyState === ReadyState.CLOSED){
+            setFatal(true)
+        }
+    },[readyState,sendMessage])
 
-    useEffect(
-        () => {
-            // Update feed every 2s
-            const interval = window.setInterval(update,2000)
+    useEffect(() => {
+        console.log(lastJsonMessage)
+        if (lastJsonMessage) {
+            if (Object.prototype.hasOwnProperty.call(lastJsonMessage, "items")) {
+                setAuthenticated(true)
+                const i = (lastJsonMessage as YBFeed).items
+                if (i) {
+                    setFeedItems(i)
+                }
+            }
+            if (Object.prototype.hasOwnProperty.call(lastJsonMessage, "action")) {
+                sendMessage("feed")
+            }
+        }
 
-            // Authenticate feed if a secret is found in URL
-            const secret = searchParams.get("secret")
-            if (secret) {
-                connection.AuthenticateFeed(feedParam,secret)
-                    .then(() => {
-                        setGoTo("/" + feedParam)
-                        update()
-                    })
-                    .catch((e) => {
-                        notifications.show({
-                            message:e.message,
-                            color: "red",
-                            ...defaultNotificationProps
-                        })
-                        setAuthenticated(false)
-                    })
-            }
-            else {
-                update()
-            }
+    },[lastJsonMessage,sendMessage])
 
-            // Set web notification public key
-            fetch("/api/feed/"+encodeURIComponent(feedParam),{cache: "no-cache"})
-                .then(r => {
-                    if (r.status === 200) {
-                        const v = r.headers.get("Ybfeed-Vapidpublickey")
-                        if (v) {
-                            setVapid(v)
-                        }
-                    }
-                })
-            return () => {
-                window.clearInterval(interval)
-            }
-            // eslint-disable-next-line react-hooks/exhaustive-deps
-        },[updateGeneration]
-    )
+    // function update() {
+    //     if (feedParam === undefined) {
+    //         return
+    //     }
+    //     connection.GetFeed(feedParam)
+    //     .then((f) => {
+    //         if (f === null || f.items === undefined) {
+    //             return
+    //         }
+    //         setFatal(null)
+    //         let do_update = false
+
+    //         let found
+
+    //         // Loop over current items and keep what is already here
+
+    //         const oldItems = []
+    //         for (let i=0;i<feedItems.current.length;i++) {
+    //             const current_old_item = feedItems.current[i]
+    //             found = false
+    //             for (let j=0;j<f.items.length;j++) {
+    //                 const current_new_item = f.items[j]
+    //                 if (current_new_item.name === current_old_item.name) {
+    //                     found = true
+    //                     oldItems.push(feedItems.current[i])
+    //                 }
+    //             }
+    //             if (found === false) {
+    //                 do_update = true
+    //             }
+    //         }
+    //         feedItems.current.length = 0
+    //         feedItems.current = [...oldItems]
+
+    //         // Loop over new items and add what is new
+    //         for (let i=0;i<f.items.length;i++) {
+    //             const current_new_item = f.items[i]
+    //             found = false
+    //             for (let j=0;j<feedItems.current.length;j++) {
+    //                 const current_existing_item = feedItems.current[j]
+    //                 if (current_existing_item.name === current_new_item.name) {
+    //                     found = true
+    //                 }
+    //             }
+    //             if (found === false) {
+    //                 feedItems.current.push(f.items[i])
+    //                 do_update=true
+    //             }
+    //         }
+
+    //         feedItems.current.sort((a,b) =>{
+    //             return (a.date < b.date)?1:-1
+    //         })
+    //         if (do_update === true) {
+    //             setUpdateGeneration(updateGeneration+1)
+    //         }
+    //         if (f.secret) {
+    //             setSecret(f.secret)
+    //             setAuthenticated(true)
+    //         }
+    //     })
+    //     .catch(e => {
+    //         if (e.status === 401) {
+    //             setAuthenticated(false)
+    //         } else if (e.status === 500) {
+    //             setFatal(e.message)
+    //         }
+    //     })
+    // }
+
+    // useEffect(
+    //     () => {
+    //         // Update feed every 2s
+    //         //const interval = window.setInterval(update,2000)
+
+    //         // Authenticate feed if a secret is found in URL
+    //         const secret = searchParams.get("secret")
+    //         if (secret) {
+    //             connection.AuthenticateFeed(feedParam,secret)
+    //                 .then(() => {
+    //                     setGoTo("/" + feedParam)
+    //                     //update()
+    //                 })
+    //                 .catch((e) => {
+    //                     notifications.show({
+    //                         message:e.message,
+    //                         color: "red",
+    //                         ...defaultNotificationProps
+    //                     })
+    //                     setAuthenticated(false)
+    //                 })
+    //         }
+    //         // else {
+    //         //     update()
+    //         // }
+
+    //         // Set web notification public key
+    //         fetch("/api/feed/"+encodeURIComponent(feedParam),{cache: "no-cache"})
+    //             .then(r => {
+    //                 if (r.status === 200) {
+    //                     const v = r.headers.get("Ybfeed-Vapidpublickey")
+    //                     if (v) {
+    //                         setVapid(v)
+    //                     }
+    //                 }
+    //             })
+    //         // return () => {
+    //         //     window.clearInterval(interval)
+    //         // }
+    //         // eslint-disable-next-line react-hooks/exhaustive-deps
+    //     },[updateGeneration]
+    //)
 
     const handlePinModalCancel = () => {
         setPinModalOpen(false)
@@ -224,9 +291,9 @@ export function YBFeedFeed() {
                 </Center>
             </Modal>
 
-            <YBPasteCardComponent empty={feedItems.current.length === 0} onPaste={update}/>
+            <YBPasteCardComponent empty={feedItems.length === 0}/>
 
-            <YBFeedItemsComponent items={feedItems.current} onUpdate={update} onDelete={update}/>
+            <YBFeedItemsComponent items={feedItems}/>
             </>
             :""}
 

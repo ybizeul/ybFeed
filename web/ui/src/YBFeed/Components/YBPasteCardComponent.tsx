@@ -9,7 +9,7 @@ import './YBPasteCardComponent.css'
 
 interface YBPasteCardComponentProps {
     empty?: boolean
-    onPaste: () => void
+    onPaste?: () => void
 }
 
 export function YBPasteCardComponent(props:YBPasteCardComponentProps) {
@@ -62,7 +62,9 @@ export function YBPasteCardComponent(props:YBPasteCardComponentProps) {
           })
           .then(() => {
             form.setFieldValue("text","")
-            props.onPaste()
+            if (props.onPaste) {
+                props.onPaste()
+            }
           })
     }
 
