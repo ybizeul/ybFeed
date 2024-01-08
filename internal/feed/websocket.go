@@ -87,7 +87,7 @@ func (m *WebSocketManager) RunSocketForFeed(feedName string, w http.ResponseWrit
 	feedSockets.websockets = append(feedSockets.websockets, c)
 	logger.Debug("Added connection", slog.Int("count", len(feedSockets.websockets)))
 
-	logger.Info("WebSocket added", slog.Int("array size", len(feedSockets.websockets)))
+	logger.Debug("WebSocket added", slog.Int("array size", len(feedSockets.websockets)))
 
 	if err != nil {
 		utils.CloseWithCodeAndMessage(w, 500, "Unable to upgrade WebSocket")
@@ -103,7 +103,7 @@ func (m *WebSocketManager) RunSocketForFeed(feedName string, w http.ResponseWrit
 		mt, message, err := c.ReadMessage()
 		logger.Debug("Message Received", slog.String("message", string(message)), slog.Int("messageType", mt))
 		if err != nil {
-			slog.Info("Error reading message", slog.String("error", err.Error()), slog.Int("messageType", mt))
+			slog.Error("Error reading message", slog.String("error", err.Error()), slog.Int("messageType", mt))
 			break
 		}
 		switch strings.TrimSpace(string(message)) {
@@ -123,9 +123,9 @@ func (m *WebSocketManager) RunSocketForFeed(feedName string, w http.ResponseWrit
 func (m *WebSocketManager) NotifyAdd(item *PublicFeedItem) error {
 	logger.Debug("Notify websocket", slog.Any("item", item), slog.Int("ws count", len(m.FeedSockets)))
 	for _, f := range m.FeedSockets {
-		slog.Info("checking feed", slog.String("feedName", f.feedName))
+		logger.Debug("checking feed", slog.String("feedName", f.feedName))
 		if f.feedName == item.Feed.Name {
-			slog.Info("Found feed", slog.String("feedName", f.feedName))
+			logger.Debug("Found feed", slog.String("feedName", f.feedName))
 			for _, w := range f.websockets {
 				if err := w.WriteJSON(FeedNotification{
 					Action: "add",
@@ -142,9 +142,9 @@ func (m *WebSocketManager) NotifyAdd(item *PublicFeedItem) error {
 func (m *WebSocketManager) NotifyRemove(item *PublicFeedItem) error {
 	logger.Debug("Notify websocket", slog.Any("item", item), slog.Int("ws count", len(m.FeedSockets)))
 	for _, f := range m.FeedSockets {
-		slog.Info("checking feed", slog.String("feedName", f.feedName))
+		logger.Debug("checking feed", slog.String("feedName", f.feedName))
 		if f.feedName == item.Feed.Name {
-			slog.Info("Found feed", slog.String("feedName", f.feedName))
+			logger.Debug("Found feed", slog.String("feedName", f.feedName))
 			for _, w := range f.websockets {
 				if err := w.WriteJSON(FeedNotification{
 					Action: "remove",

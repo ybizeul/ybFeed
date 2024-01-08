@@ -14,6 +14,15 @@ import (
 	"golang.org/x/exp/slog"
 )
 
+var fLogLevel = new(slog.LevelVar)
+var fLogger = slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: fLogLevel})).WithGroup("feedManager")
+
+func init() {
+	if os.Getenv("DEBUG") != "" || os.Getenv("DEBUG_FEED") != "" {
+		fLogLevel.Set(slog.LevelDebug)
+	}
+}
+
 type FeedError struct {
 	Message string
 	Code    int
@@ -95,7 +104,7 @@ func (feed *Feed) GetPublicItem(i string) (*PublicFeedItem, error) {
 }
 func (feed *Feed) GetItemData(item string) ([]byte, error) {
 	// Read item content
-	slog.Info("Getting Item", slog.String("feed", feed.Name()), slog.String("name", item))
+	fLogger.Debug("Getting Item", slog.String("feed", feed.Name()), slog.String("name", item))
 	var content []byte
 	filePath := path.Join(feed.Path, item)
 	content, err := os.ReadFile(filePath)
@@ -117,7 +126,7 @@ func (feed *Feed) GetItemData(item string) ([]byte, error) {
 func (feed *Feed) IsSecretValid(secret string) error {
 	if secret == "" {
 		code := 401
-		slog.Error("No secret was provided", slog.Int("return", code))
+		fLogger.Error("No secret was provided", slog.Int("return", code))
 		return &FeedError{
 			Code:    code,
 			Message: "Unauthorized",
@@ -127,7 +136,7 @@ func (feed *Feed) IsSecretValid(secret string) error {
 	if len(secret) != 4 {
 		if feed.Config.Secret != secret {
 			code := 401
-			slog.Error("Invalid secret", slog.Int("return", code))
+			fLogger.Error("Invalid secret", slog.Int("return", code))
 			return &FeedError{
 				Code:    code,
 				Message: "Authentication failed",
@@ -144,7 +153,7 @@ func (feed *Feed) IsSecretValid(secret string) error {
 }
 
 func (f *Feed) AddItem(contentType string, r io.ReadCloser) error {
-	slog.Debug("Adding Item", slog.String("feed", f.Name()), slog.String("content-type", contentType))
+	fLogger.Debug("Adding Item", slog.String("feed", f.Name()), slog.String("content-type", contentType))
 	fileExtensions := map[string]string{
 		"image/png":  "png",
 		"image/jpeg": "jpg",
@@ -227,7 +236,7 @@ func (f *Feed) AddItem(contentType string, r io.ReadCloser) error {
 		}
 	}
 
-	slog.Info("Added Item", slog.String("name", filename+"."+ext), slog.String("feed", f.Path), slog.String("content-type", contentType))
+	fLogger.Debug("Added Item", slog.String("name", filename+"."+ext), slog.String("feed", f.Path), slog.String("content-type", contentType))
 
 	return nil
 }
@@ -262,7 +271,7 @@ func (f *Feed) RemoveItem(item string) error {
 		}
 	}
 
-	slog.Info("Removed Item", slog.String("name", item), slog.String("feed", f.Name()))
+	slog.Debug("Removed Item", slog.String("name", item), slog.String("feed", f.Name()))
 	return nil
 }
 

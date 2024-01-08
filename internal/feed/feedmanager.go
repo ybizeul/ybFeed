@@ -11,6 +11,15 @@ import (
 	"golang.org/x/exp/slog"
 )
 
+var fmLogLevel = new(slog.LevelVar)
+var fmLogger = slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: fmLogLevel})).WithGroup("feedManager")
+
+func init() {
+	if os.Getenv("DEBUG") != "" || os.Getenv("DEBUG_FEEDMANAGER") != "" {
+		fmLogLevel.Set(slog.LevelDebug)
+	}
+}
+
 type FeedManager struct {
 	path             string
 	websocketManager *WebSocketManager
@@ -22,11 +31,10 @@ func NewFeedManager(path string, w *WebSocketManager) *FeedManager {
 		path:             path,
 		websocketManager: w,
 	}
-	slog.Info("Creating new feed manager", slog.String("path", path), slog.Any("feedManager", result))
 	return result
 }
 func (m *FeedManager) NewFeed(feedName string) (*Feed, error) {
-	slog.Info("Creating new feed", slog.String("feed", feedName))
+	fmLogger.Info("Creating new feed", slog.String("feed", feedName))
 	feedPath := path.Join(m.path, feedName)
 
 	_, err := os.Stat(feedPath)
@@ -39,7 +47,7 @@ func (m *FeedManager) NewFeed(feedName string) (*Feed, error) {
 
 	err = os.Mkdir(feedPath, 0700)
 	if err != nil {
-		slog.Error("Error creating feed directory", slog.String("feed", feedName), slog.String("directory", feedPath))
+		fmLogger.Error("Error creating feed directory", slog.String("feed", feedName), slog.String("directory", feedPath))
 		return nil, err
 	}
 
@@ -55,7 +63,7 @@ func (m *FeedManager) NewFeed(feedName string) (*Feed, error) {
 	err = feed.Config.Write()
 
 	if err != nil {
-		slog.Error("Unable to write config %s", err.Error())
+		fmLogger.Error("Unable to write config %s", err.Error())
 		return nil, err
 	}
 
@@ -91,10 +99,10 @@ func (m *FeedManager) GetFeed(feedName string) (*Feed, error) {
 }
 
 func (m *FeedManager) GetPublicFeed(feedName string, secret string) (*PublicFeed, error) {
-	slog.Info("Getting Public Feed", slog.Any("feedManager", m))
+	fmLogger.Debug("Getting Public Feed", slog.Any("feedManager", m))
 	feedPath := path.Join(m.path, feedName)
 
-	feedLog := slog.Default().With(slog.String("feed", feedName))
+	feedLog := fmLogger.With(slog.String("feed", feedName))
 
 	feedLog.Debug("Getting feed", slog.Int("secret_len", len(secret)))
 

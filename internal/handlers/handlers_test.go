@@ -20,6 +20,9 @@ const baseDir = "../../test/"
 const dataDir = "./data"
 const testFeedName = "test"
 
+const goodSecret = "b90e516e-b256-41ff-a84e-a9e8d5b6fe30"
+const badSecret = "foo"
+
 type APITestRequest struct {
 	method      string
 	feed        string
@@ -39,9 +42,6 @@ const (
 )
 
 func (t APITestRequest) performRequest() (*http.Response, error) {
-	const goodSecret = "b90e516e-b256-41ff-a84e-a9e8d5b6fe30"
-	const badSecret = "foo"
-
 	api, err := NewApiHandler(path.Join(baseDir, dataDir))
 	if err != nil {
 		return nil, err
@@ -547,3 +547,13 @@ func TestSubscribeFeedNotifications(t *testing.T) {
 		t.Errorf("Bad p256dh, got %s", f.Config.Subscriptions[0].Keys.P256dh)
 	}
 }
+
+// func TestConnectWebSocket(t *testing.T) {
+// 	api, err := NewApiHandler(path.Join(baseDir, dataDir))
+// 	if err != nil {
+// 		t.Errorf("Can't start server")
+// 	}
+// 	api.MaxBodySize = 5 * 1024 * 1024
+// 	r := api.GetServer()
+
+// }

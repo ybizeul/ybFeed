@@ -22,6 +22,15 @@ import (
 	"github.com/ybizeul/ybfeed/web/ui"
 )
 
+var logLevel = new(slog.LevelVar)
+var logger = slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: logLevel})).WithGroup("http")
+
+func init() {
+	if os.Getenv("DEBUG") != "" || os.Getenv("DEBUG_HTTP") != "" {
+		logLevel.Set(slog.LevelDebug)
+	}
+}
+
 var webUiHandler = http.FileServer(http.FS(ui.GetUiFs()))
 
 // RootHandlerFunc figures out how to handle incoming HTTP requests.
@@ -29,7 +38,7 @@ var webUiHandler = http.FileServer(http.FS(ui.GetUiFs()))
 // then it serves this file from webUiHandler, otherwise it returns
 // index.html for proper react routing
 func RootHandlerFunc(w http.ResponseWriter, r *http.Request) {
-	slog.Default().WithGroup("http").Debug("Root request", slog.Any("request", r))
+	logger.Debug("Root request", slog.Any("request", r))
 
 	p := r.URL.Path
 
@@ -45,7 +54,7 @@ func RootHandlerFunc(w http.ResponseWriter, r *http.Request) {
 	matches, err := fs.Glob(ui, p)
 
 	if err != nil {
-		slog.Error("Unable to get web ui fs", slog.String("error", err.Error()))
+		logger.Error("Unable to get web ui fs", slog.String("error", err.Error()))
 	}
 
 	if len(matches) == 1 {
@@ -59,12 +68,12 @@ func RootHandlerFunc(w http.ResponseWriter, r *http.Request) {
 
 	content, err := fs.ReadFile(ui, "index.html")
 	if err != nil {
-		slog.Error("Unable to read index.html from web ui", slog.String("error", err.Error()))
+		logger.Error("Unable to read index.html from web ui", slog.String("error", err.Error()))
 	}
 
 	_, err = w.Write(content)
 	if err != nil {
-		slog.Error("Error while writing HTTP response", slog.String("error", err.Error()))
+		logger.Error("Error while writing HTTP response", slog.String("error", err.Error()))
 	}
 }
 
@@ -158,7 +167,7 @@ func (api *ApiHandler) StartServer() {
 	r := api.GetServer()
 	err := http.ListenAndServe(fmt.Sprintf(":%d", api.HttpPort), r)
 	if err != nil {
-		slog.Error("Unable to start HTTP server",
+		logger.Error("Unable to start HTTP server",
 			slog.String("error", err.Error()))
 		os.Exit(1)
 	}
@@ -230,7 +239,7 @@ func (api *ApiHandler) feedWSHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (api *ApiHandler) feedHandlerFunc(w http.ResponseWriter, r *http.Request) {
-	slog.Default().WithGroup("http").Debug("Feed API request", slog.Any("request", r))
+	logger.Debug("Feed API request", slog.Any("request", r))
 
 	secret, fromURL := utils.GetSecret(r)
 
@@ -296,12 +305,12 @@ func (api *ApiHandler) feedHandlerFunc(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if _, err = w.Write(j); err != nil {
-		slog.Error("Error while writing HTTP response", slog.String("error", err.Error()))
+		logger.Error("Error while writing HTTP response", slog.String("error", err.Error()))
 	}
 }
 
 func (api *ApiHandler) feedPatchHandlerFunc(w http.ResponseWriter, r *http.Request) {
-	slog.Default().WithGroup("http").Debug("Feed API Set PIN request", slog.Any("request", r))
+	logger.Debug("Feed API Set PIN request", slog.Any("request", r))
 	secret, _ := utils.GetSecret(r)
 
 	feedName, _ := url.QueryUnescape(chi.URLParam(r, "feedName"))
@@ -327,7 +336,7 @@ func (api *ApiHandler) feedPatchHandlerFunc(w http.ResponseWriter, r *http.Reque
 	if err != nil {
 		w.WriteHeader(500)
 		if _, err = w.Write([]byte(err.Error())); err != nil {
-			slog.Error("Error while writing HTTP response", slog.String("error", err.Error()))
+			logger.Error("Error while writing HTTP response", slog.String("error", err.Error()))
 		}
 		return
 	}
@@ -344,7 +353,7 @@ func (api *ApiHandler) feedPatchHandlerFunc(w http.ResponseWriter, r *http.Reque
 }
 
 func (api *ApiHandler) feedItemHandlerFunc(w http.ResponseWriter, r *http.Request) {
-	slog.Default().WithGroup("http").Debug("Item API GET request", slog.Any("request", r))
+	logger.Debug("Item API GET request", slog.Any("request", r))
 
 	secret, _ := utils.GetSecret(r)
 
@@ -383,12 +392,12 @@ func (api *ApiHandler) feedItemHandlerFunc(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	if _, err = w.Write(content); err != nil {
-		slog.Error("Error while writing HTTP response", slog.String("error", err.Error()))
+		logger.Error("Error while writing HTTP response", slog.String("error", err.Error()))
 	}
 }
 
 func (api *ApiHandler) feedPostHandlerFunc(w http.ResponseWriter, r *http.Request) {
-	slog.Default().WithGroup("http").Debug("Item API POST request", slog.Any("request", r))
+	logger.Debug("Item API POST request", slog.Any("request", r))
 
 	secret, _ := utils.GetSecret(r)
 
@@ -425,14 +434,14 @@ func (api *ApiHandler) feedPostHandlerFunc(w http.ResponseWriter, r *http.Reques
 
 	// Send push notifications
 	for _, subscription := range f.Config.Subscriptions {
-		slog.Info("Sending push notification", slog.String("endpoint", subscription.Endpoint))
+		slog.Debug("Sending push notification", slog.String("endpoint", subscription.Endpoint))
 		resp, _ := webpush.SendNotification([]byte(fmt.Sprintf("New item posted to feed %s", f.Name())), &subscription, &webpush.Options{
 			Subscriber:      "example@example.com", // Do not include "mailto:"
 			VAPIDPublicKey:  api.Config.NotificationSettings.VAPIDPublicKey,
 			VAPIDPrivateKey: api.Config.NotificationSettings.VAPIDPrivateKey,
 			TTL:             30,
 		})
-		slog.Info("Response", slog.Any("resp", resp))
+		slog.Debug("Response", slog.Any("resp", resp))
 		defer resp.Body.Close()
 	}
 
@@ -442,7 +451,7 @@ func (api *ApiHandler) feedPostHandlerFunc(w http.ResponseWriter, r *http.Reques
 }
 
 func (api *ApiHandler) feedItemDeleteHandlerFunc(w http.ResponseWriter, r *http.Request) {
-	slog.Default().WithGroup("http").Debug("Item API DELETE request", slog.Any("request", r))
+	logger.Debug("Item API DELETE request", slog.Any("request", r))
 
 	secret, _ := utils.GetSecret(r)
 
@@ -480,13 +489,13 @@ func (api *ApiHandler) feedItemDeleteHandlerFunc(w http.ResponseWriter, r *http.
 	}
 
 	if _, err = w.Write([]byte("Item Removed")); err != nil {
-		slog.Error("Error while writing HTTP response", slog.String("error", err.Error()))
+		logger.Error("Error while writing HTTP response", slog.String("error", err.Error()))
 	}
 }
 
 func (api *ApiHandler) feedSubscriptionHandlerFunc(w http.ResponseWriter, r *http.Request) {
 
-	slog.Default().WithGroup("http").Debug("Feed subscription request", slog.Any("request", r))
+	logger.Debug("Feed subscription request", slog.Any("request", r))
 
 	secret, _ := utils.GetSecret(r)
 
@@ -539,7 +548,7 @@ func (api *ApiHandler) feedSubscriptionHandlerFunc(w http.ResponseWriter, r *htt
 
 func (api *ApiHandler) feedUnsubscribeHandlerFunc(w http.ResponseWriter, r *http.Request) {
 
-	slog.Default().WithGroup("http").Debug("Feed subscription request", slog.Any("request", r))
+	logger.Debug("Feed subscription request", slog.Any("request", r))
 
 	secret, _ := utils.GetSecret(r)
 
