@@ -36,17 +36,6 @@ export function YBFeedFeed() {
 
     const { sendMessage, lastJsonMessage, readyState } = useWebSocket(window.location.protocol.replace("http","ws") + "//" + window.location.host + "/ws/" + feedParam,{queryParams:{"secret":secret},retryOnError: true}, secret != "");
 
-    //
-    // Creating links to feed
-    //
-    const copyLink = () => {
-        const link = window.location.href + "?secret=" + secret
-        navigator.clipboard.writeText(link)
-        notifications.show({
-            message:'Link Copied!', ...defaultNotificationProps
-        })
-    }
-
     // If secret is sent as part of the URL params, set secret state and
     // redirect to the URL omitting the secret
     useEffect(() => {
@@ -75,7 +64,8 @@ export function YBFeedFeed() {
             .catch((e) => {
                 if (e.status === 401) {
                     setAuthenticated(false)
-                } else if (e.status === 500) {
+                }
+                else {
                     setFatal(e.message)
                 }
             })
@@ -126,121 +116,15 @@ export function YBFeedFeed() {
 
     },[lastJsonMessage,sendMessage])
 
-    // function update() {
-    //     if (feedParam === undefined) {
-    //         return
-    //     }
-    //     connection.GetFeed(feedParam)
-    //     .then((f) => {
-    //         if (f === null || f.items === undefined) {
-    //             return
-    //         }
-    //         setFatal(null)
-    //         let do_update = false
-
-    //         let found
-
-    //         // Loop over current items and keep what is already here
-
-    //         const oldItems = []
-    //         for (let i=0;i<feedItems.current.length;i++) {
-    //             const current_old_item = feedItems.current[i]
-    //             found = false
-    //             for (let j=0;j<f.items.length;j++) {
-    //                 const current_new_item = f.items[j]
-    //                 if (current_new_item.name === current_old_item.name) {
-    //                     found = true
-    //                     oldItems.push(feedItems.current[i])
-    //                 }
-    //             }
-    //             if (found === false) {
-    //                 do_update = true
-    //             }
-    //         }
-    //         feedItems.current.length = 0
-    //         feedItems.current = [...oldItems]
-
-    //         // Loop over new items and add what is new
-    //         for (let i=0;i<f.items.length;i++) {
-    //             const current_new_item = f.items[i]
-    //             found = false
-    //             for (let j=0;j<feedItems.current.length;j++) {
-    //                 const current_existing_item = feedItems.current[j]
-    //                 if (current_existing_item.name === current_new_item.name) {
-    //                     found = true
-    //                 }
-    //             }
-    //             if (found === false) {
-    //                 feedItems.current.push(f.items[i])
-    //                 do_update=true
-    //             }
-    //         }
-
-    //         feedItems.current.sort((a,b) =>{
-    //             return (a.date < b.date)?1:-1
-    //         })
-    //         if (do_update === true) {
-    //             setUpdateGeneration(updateGeneration+1)
-    //         }
-    //         if (f.secret) {
-    //             setSecret(f.secret)
-    //             setAuthenticated(true)
-    //         }
-    //     })
-    //     .catch(e => {
-    //         if (e.status === 401) {
-    //             setAuthenticated(false)
-    //         } else if (e.status === 500) {
-    //             setFatal(e.message)
-    //         }
-    //     })
-    // }
-
-    // useEffect(
-    //     () => {
-    //         // Update feed every 2s
-    //         //const interval = window.setInterval(update,2000)
-
-    //         // Authenticate feed if a secret is found in URL
-    //         const secret = searchParams.get("secret")
-    //         if (secret) {
-    //             connection.AuthenticateFeed(feedParam,secret)
-    //                 .then(() => {
-    //                     setGoTo("/" + feedParam)
-    //                     //update()
-    //                 })
-    //                 .catch((e) => {
-    //                     notifications.show({
-    //                         message:e.message,
-    //                         color: "red",
-    //                         ...defaultNotificationProps
-    //                     })
-    //                     setAuthenticated(false)
-    //                 })
-    //         }
-    //         // else {
-    //         //     update()
-    //         // }
-
-    //         // Set web notification public key
-    //         fetch("/api/feed/"+encodeURIComponent(feedParam),{cache: "no-cache"})
-    //             .then(r => {
-    //                 if (r.status === 200) {
-    //                     const v = r.headers.get("Ybfeed-Vapidpublickey")
-    //                     if (v) {
-    //                         setVapid(v)
-    //                     }
-    //                 }
-    //             })
-    //         // return () => {
-    //         //     window.clearInterval(interval)
-    //         // }
-    //         // eslint-disable-next-line react-hooks/exhaustive-deps
-    //     },[updateGeneration]
-    //)
-
-    const handlePinModalCancel = () => {
-        setPinModalOpen(false)
+    //
+    // Creating links to feed
+    //
+    const copyLink = () => {
+        const link = window.location.href + "?secret=" + secret
+        navigator.clipboard.writeText(link)
+        notifications.show({
+            message:'Link Copied!', ...defaultNotificationProps
+        })
     }
 
     const setPIN = (pin: string) => {
@@ -299,7 +183,7 @@ export function YBFeedFeed() {
             <>
             {authenticated===true?
             <>
-            <Modal title="Set Temporary PIN" className="PINModal" opened={pinModalOpen} onClose={handlePinModalCancel}>
+            <Modal title="Set Temporary PIN" className="PINModal" opened={pinModalOpen} onClose={() => setPinModalOpen(false)}>
                 <div className="text-center">
                     Please choose a PIN, it will expire after 2 minutes:
                 </div>
