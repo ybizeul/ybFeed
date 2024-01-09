@@ -8,7 +8,7 @@ RUN npm run build
 FROM golang AS golang
 WORKDIR /app
 ADD . /app/
-COPY --from=node /app/web/ui/build/ /app/web/ui/build/
+COPY --from=node /app/web/ui/dist/ /app/web/ui/dist/
 RUN CGO_ENABLED=0 go build -o /ybFeed cmd/ybfeed/*.go
 
 FROM scratch
