@@ -2,7 +2,6 @@ package feed
 
 import (
 	"fmt"
-	"log/slog"
 	"net/http"
 	"os"
 	"strings"
@@ -10,6 +9,7 @@ import (
 	"github.com/gorilla/websocket"
 	ws "github.com/gorilla/websocket"
 	"github.com/ybizeul/ybfeed/internal/utils"
+	"golang.org/x/exp/slog"
 )
 
 var logLevel = new(slog.LevelVar)
