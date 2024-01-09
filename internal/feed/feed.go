@@ -229,6 +229,8 @@ func (f *Feed) AddItem(contentType string, r io.ReadCloser) error {
 		}
 	}
 
+	f.sendPushNotification()
+
 	publicItem, err := f.GetPublicItem(filename + "." + ext)
 
 	if err != nil {
