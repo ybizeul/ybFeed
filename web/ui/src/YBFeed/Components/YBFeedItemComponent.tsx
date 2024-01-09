@@ -124,7 +124,12 @@ export function YBFeedItemComponent(props: YBFeedItemComponentProps) {
     const item = useContext(FeedItemContext)
 
     const [textContent,setTextContent] = useState<string|undefined>(undefined)
+    const [timedOut, setTimedOut] = useState(false)
 
+    useEffect(()=> {
+        window.setTimeout(() => setTimedOut(true),1000)
+    })
+    
     useEffect(() => {
         if (item && item!.type === 0) {
             const connection = new YBFeedConnector()
@@ -138,10 +143,13 @@ export function YBFeedItemComponent(props: YBFeedItemComponentProps) {
     return(
         <>
         {!item?
+            timedOut?
             <Card mt="2em" withBorder shadow="sm" radius="md" mb="2em">
                 <YBHeadingComponent onDelete={props.onDelete} clipboardContent={textContent}/>
                 <Skeleton mt="2em" height={50}/>
             </Card>
+            :
+            ""
         :
         <Card withBorder shadow="sm" radius="md" mb="2em">
             <YBHeadingComponent onDelete={props.onDelete} clipboardContent={textContent}/>
