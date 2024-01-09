@@ -23,5 +23,6 @@ push: ui
 clean:
 	rm -f ybFeed
 	rm -rf web/ui/node_modules
+	rm -rf web/ui/dist
 
 .PHONY: ui
