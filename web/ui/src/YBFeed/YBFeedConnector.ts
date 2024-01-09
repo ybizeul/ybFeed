@@ -32,17 +32,19 @@ export class YBFeedConnector {
                         reject(new YBFeedError(f.status, text))
                     })
                 }
-                f.json()
-                .then(j => {
-                    j.vapidpublickey = f.headers.get("Ybfeed-Vapidpublickey")
-                    for (let i=0;i<j.items.length;i++) {
-                        j.items[i].feed = j
-                    }
-                    resolve(j)
-                })
-                .catch((e) => {
-                    reject(new YBFeedError(e.status, "Server Error"))
-                })
+                else {
+                    f.json()
+                    .then(j => {
+                        j.vapidpublickey = f.headers.get("Ybfeed-Vapidpublickey")
+                        for (let i=0;i<j.items.length;i++) {
+                            j.items[i].feed = j
+                        }
+                        resolve(j)
+                    })
+                    .catch((e) => {
+                        reject(new YBFeedError(e.status, "Server Error: " + e.message))
+                    })
+                }
             })
             .catch((e) => {
                 reject(new YBFeedError(e.status, "Server Unavailable"))
