@@ -20,7 +20,7 @@ export function YBFeedVersionComponent() {
                     <Skeleton mb="1em" width="10em" height="5"/>
                 </Center>
             :
-                <Text pb="1em" size="xs" ta="center">ybFeed {version}</Text>
+                <Text pb="1em" size="0.7em" c={"gray"} ta="center">ybFeed {version}</Text>
             }
             </>
         )
