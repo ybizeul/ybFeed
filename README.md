@@ -1,31 +1,27 @@
 ### Introduction
 
-In a nutshell, ybFeed is a personal micro feed where you can post snippets of 
+**ybFeed** is a personal micro feed where you can post snippets of 
 text or images.
 
-The primary use case is to share information between computers where you don't
-have the possibility to copy/paste, like a restricted VDI environment.
+The primary use case is to share information between computers when you don't
+have the possibility to copy/paste, like on a restricted VDI environment.
 
-Open the feed on your local computer and the remote one, then everything you add
-will be displayed on the other browser as well.
+Open the feed on your local computer, and the remote one, then everything will
+be kept in sync when you add or remove items.
 
 ### Concepts
 
-When going to the home page, you are invited to create a feed with a unique
-name.
+On ybFeed home page, you are invited to create a feed with a unique name.
 
-Once on a feed, you can paste data on it, text or images, they will be added
-to the feed by reverse order.
+Once on a feed, you can paste data in it, text or images, they will be
+displayed in reverse order.
 
 You can then decide to share the feed two different ways :
 
-- Copy a secret link to the feed, than you can paste on a different computer,
+- Copy a secret link to the feed, that you can paste on a different computer,
 you will be automatically authenticated
-- If copy/paste is not an option, you can set a temporary 4 digit PIN. You then
-go to the other computer and it will ask for the PIN when you open the page.
-
-That's pretty much all there is to it, you can paste and delete items from any
-browser.
+- Set a temporary 4 digit PIN. You then go to another computer and open the
+feed. You will be prompted for the PIN to unlock it.
 
 ### Screenshot
 
@@ -33,16 +29,19 @@ browser.
 
 ### Caveats
 
-This is just a side project I'm working on, so there is probably lots of issues
+This is just a side project I'm working on, so there is probably lots of issues.
+
+Feel free to open GitHub issues to reuest features or bug fixes.
 
 Here are some I already identified :
 
-- Paste might not work over non secured connections (https)
-- ybFeed relies on a cookie to authenticate the session, if the cookie is lost
-there is no easy way to retrieve the feed (you can get it from the `secret` file
-in the feed directory)
-- Most modern browser won't honor long cookie lifetime, some alternative
-authentication would be needed to get access once the cookie is expired
+- Paste might not work over non secured connections (https), this is a
+limitation as a security measure with some web browsers
+- ybFeed relies on a cookie to authenticate a session, if the cookie is lost
+there is no easy way to retrieve the feed (you can get it back from the
+`config.json` file in the feed directory)
+- Most modern browser won't honor long cookie lifetime, you might have to
+recover the secret from `config.json` if it happens.
 - Security could probably be improved, tokens and PINs are stored in clear on
 the filesystem
 - No rate control or capacity limits, quite exposed to flooding as it is
@@ -90,8 +89,9 @@ make
 
 Once you cloned the repository, issue the following commands :
 ```
-# Install node dependencies
 cd web/ui/
+
+# Install node dependencies
 npm install
 
 # Build UI
@@ -112,4 +112,3 @@ go build -o ybFeed cmd/ybfeed/*.go
 ```
 docker build . -t ybfeed
 ```
-
