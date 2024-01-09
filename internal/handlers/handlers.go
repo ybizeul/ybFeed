@@ -187,6 +187,12 @@ func (api *ApiHandler) GetServer() *chi.Mux {
 
 	r.Mount("/ws/{feedName}", http.HandlerFunc(api.feedWSHandler))
 
+	r.Get("/api", func(w http.ResponseWriter, r *http.Request) {
+		if _, err := w.Write([]byte("OK")); err != nil {
+			logger.Error("Cannot write Ping response")
+		}
+	})
+
 	r.Route("/api/feed", func(r chi.Router) {
 		r.Get("/{feedName}", api.feedHandlerFunc)
 		r.Post("/{feedName}", api.feedPostHandlerFunc)
