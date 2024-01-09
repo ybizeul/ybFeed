@@ -12,6 +12,7 @@ export class YBFeed {
     name: string;
     secret: string|undefined;
     items: YBFeedItem[]|undefined;
+    vapidpublickey: string|undefined;
     constructor(name: string) {
         this.name = name
         this.items = undefined

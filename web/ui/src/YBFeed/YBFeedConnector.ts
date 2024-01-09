@@ -4,7 +4,19 @@ export class YBFeedConnector {
     feedUrl(feedName: string): string {
         return "/api/feed/"+encodeURIComponent(feedName)
     }
-
+    async Ping(): Promise<Headers> {
+        return new Promise((resolve, reject) => {
+            fetch("/api",{
+                credentials: "include"
+            })
+            .then((f) => {
+                if (f) {
+                    resolve(f.headers)
+                }
+            })
+            .catch((e)=>reject(e))
+        })
+    }
     async GetFeed(feedName: string): Promise<YBFeed|null> { 
         return new Promise((resolve, reject) => {
             fetch(this.feedUrl(feedName),{
@@ -14,18 +26,22 @@ export class YBFeedConnector {
                 if (f.status !== 200) {
                     f.text()
                     .then(text => {
+                        if (!text) {
+                            text="Empty Response"
+                        }
                         reject(new YBFeedError(f.status, text))
                     })
                 }
                 f.json()
                 .then(j => {
+                    j.vapidpublickey = f.headers.get("Ybfeed-Vapidpublickey")
                     for (let i=0;i<j.items.length;i++) {
                         j.items[i].feed = j
                     }
                     resolve(j)
                 })
                 .catch((e) => {
-                    reject(new YBFeedError(e.status, "Server Unavailable"))
+                    reject(new YBFeedError(e.status, "Server Error"))
                 })
             })
             .catch((e) => {
@@ -33,7 +49,7 @@ export class YBFeedConnector {
             })
         })
     }
-    async AuthenticateFeed(feedName: string, secret: string): Promise<boolean|YBFeedError> {
+    async AuthenticateFeed(feedName: string, secret: string): Promise<string|YBFeedError> {
         return new Promise((resolve, reject) => {
             fetch(this.feedUrl(feedName)+"?secret="+encodeURIComponent(secret),{
                 credentials: "include"
@@ -48,7 +64,10 @@ export class YBFeedConnector {
                         reject(new YBFeedError(f.status, "Server Unavailable"))
                     })
                 } else {
-                    resolve(true)
+                    f.json()
+                    .then((j) => {
+                        resolve(j.secret)
+                    })
                 }
             })
         })

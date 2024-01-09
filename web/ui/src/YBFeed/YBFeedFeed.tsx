@@ -30,9 +30,11 @@ export function YBFeedFeed() {
     const [feedItems, setFeedItems] = useState<YBFeedItem[]>([])
 
     const [fatal, setFatal] = useState(false)
+
     const connection = useMemo(() => new YBFeedConnector(),[])
 
-    const { sendMessage, lastJsonMessage, readyState } = useWebSocket(window.location.origin + "/ws/" + feedParam,{queryParams:{"secret":secret}});
+
+    const { sendMessage, lastJsonMessage, readyState } = useWebSocket(window.location.protocol.replace("http","ws") + "//" + window.location.host + "/ws/" + feedParam,{queryParams:{"secret":secret},retryOnError: true}, secret != "");
 
     //
     // Creating links to feed
@@ -44,6 +46,9 @@ export function YBFeedFeed() {
             message:'Link Copied!', ...defaultNotificationProps
         })
     }
+
+    // If secret is sent as part of the URL params, set secret state and
+    // redirect to the URL omitting the secret
     useEffect(() => {
         const s=searchParams.get("secret")
         if (s) {
@@ -54,38 +59,46 @@ export function YBFeedFeed() {
             })
             .catch((e) => console.log(e))
         }
-        else {
-            fetch("/api/feed/"+encodeURIComponent(feedParam),{cache: "no-cache"})
-            .then(r => {
-                if (r.status === 200) {
-                    const v = r.headers.get("Ybfeed-Vapidpublickey")
-                    if (v) {
-                        setVapid(v)
-                    }
+    },[searchParams, feedParam, connection, secret])
+
+    // Get current feed over http without web-socket to fetch feed secret
+    // As websocket doesn't send current cookie, we have to perform a regular
+    // http request first to get the secret
+    useEffect(() => {
+        if (!secret) {
+            connection.GetFeed(feedParam)
+            .then((f) => {
+                if (f && f.secret) {
+                    setSecret(f.secret)
+                }
+            })
+            .catch((e) => {
+                if (e.status === 401) {
+                    setAuthenticated(false)
+                } else if (e.status === 500) {
+                    setFatal(e.message)
                 }
             })
         }
-    },[feedParam,searchParams,setGoTo, secret,connection])
+    },[secret,connection,feedParam])
 
+    // Get notification public key
     useEffect(() => {
-        // Get feed properties
-        connection.GetFeed(feedParam)
-        .then((f): void => {
-            if (f?.secret) {
-                setSecret(f.secret)
+        connection.Ping()
+        .then((r) => {
+            if (r) {
+                const v = r.get("Ybfeed-Vapidpublickey")
+                if (v) {
+                    setVapid(v)
+                }
             }
         })
     })
-    //
-    // Update feed is run every 2s or o, some events
-    //
-    function update() {
-        sendMessage("feed")
-    }
+
+
     useEffect(() => {
         if (readyState === ReadyState.OPEN) {
             setFatal(false)
-            console.log("sending message feed")
             sendMessage("feed")
         }
         else if (readyState === ReadyState.CLOSED){
@@ -93,14 +106,17 @@ export function YBFeedFeed() {
         }
     },[readyState,sendMessage])
 
+    // Handles messages received by websocket
     useEffect(() => {
-        console.log(lastJsonMessage)
         if (lastJsonMessage) {
             if (Object.prototype.hasOwnProperty.call(lastJsonMessage, "items")) {
-                setAuthenticated(true)
-                const i = (lastJsonMessage as YBFeed).items
-                if (i) {
-                    setFeedItems(i)
+                const f = (lastJsonMessage as YBFeed)
+                if (f.items) {
+                    setFeedItems(f.items)
+                    setAuthenticated(true)
+                }
+                if (f.secret) {
+                    setSecret(f.secret)
                 }
             }
             if (Object.prototype.hasOwnProperty.call(lastJsonMessage, "action")) {
@@ -238,10 +254,11 @@ export function YBFeedFeed() {
             setPinModalOpen(false)
         })
     }
+
     const sendPIN = (e: string) => {
         connection.AuthenticateFeed(feedParam,e)
-        .then(() => {
-            update()
+        .then((s) => {
+            setSecret(s.toString())
         })
         .catch((e) => {
             notifications.show({message:e.message, color:"red", ...defaultNotificationProps})
@@ -277,7 +294,7 @@ export function YBFeedFeed() {
         :""}
 
         <YBBreadCrumbComponent />
-        {(authenticated==undefined)?<YBFeedItemComponent/>:""}
+        {(authenticated==undefined && !fatal)?<YBFeedItemComponent/>:""}
         {!fatal?
             <>
             {authenticated===true?
@@ -307,7 +324,7 @@ export function YBFeedFeed() {
             :""}
             </>
         :
-            <p>{fatal}</p>
+            <Center>{fatal}</Center>
         
         }
         </>
