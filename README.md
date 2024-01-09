@@ -1,6 +1,6 @@
 ### Introduction
 
-In a nutshell, ybFeed is a personnal micro feed where you can post snippets of 
+In a nutshell, ybFeed is a personal micro feed where you can post snippets of 
 text or images.
 
 The primary use case is to share information between computers where you don't
