@@ -60,6 +60,7 @@ the filesystem
 Use this method to treat youself with a quick demo of the most current version
 
 ```
+mkdir data
 docker run -p 8080:8080 -v $(pwd)/data:/data ghcr.io/ybizeul/ybfeed:latest
 ```
 
@@ -67,7 +68,7 @@ You can now point your browser to http://localhost:8080/
 
 #### Using Docker from source
 
-Use this methond if you're interested by the code and hacking around
+Use this method if you're interested by the code and hacking around
 
 ```
 git clone https://github.com/ybizeul/ybFeed.git
