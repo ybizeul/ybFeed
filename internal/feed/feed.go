@@ -14,6 +14,11 @@ import (
 	"golang.org/x/exp/slog"
 )
 
+type NotificationSettings struct {
+	VAPIDPublicKey  string
+	VAPIDPrivateKey string
+}
+
 var fLogLevel = new(slog.LevelVar)
 var fLogger = slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: fLogLevel})).WithGroup("feedManager")
 
@@ -52,9 +57,10 @@ type PublicFeed struct {
 // Feed is the internal representation of a Feed and contains all the
 // informations needed to perform its tasks
 type Feed struct {
-	Path             string
-	Config           FeedConfig
-	WebSocketManager *WebSocketManager
+	Path                 string
+	Config               FeedConfig
+	NotificationSettings *NotificationSettings
+	WebSocketManager     *WebSocketManager
 }
 
 type PublicFeedItem struct {

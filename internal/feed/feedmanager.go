@@ -21,8 +21,9 @@ func init() {
 }
 
 type FeedManager struct {
-	path             string
-	websocketManager *WebSocketManager
+	path                 string
+	websocketManager     *WebSocketManager
+	NotificationSettings *NotificationSettings
 }
 
 func NewFeedManager(path string, w *WebSocketManager) *FeedManager {
@@ -80,8 +81,9 @@ func (m *FeedManager) GetFeed(feedName string) (*Feed, error) {
 	}
 
 	result := &Feed{
-		Path:             feedPath,
-		WebSocketManager: m.websocketManager,
+		Path:                 feedPath,
+		WebSocketManager:     m.websocketManager,
+		NotificationSettings: m.NotificationSettings,
 	}
 
 	c, err := FeedConfigForFeed(result)

@@ -89,7 +89,7 @@ type ApiHandler struct {
 }
 
 type APIConfig struct {
-	NotificationSettings *NotificationSettings `json:"notification,omitempty"`
+	NotificationSettings *feed.NotificationSettings `json:"notification,omitempty"`
 }
 
 func APIConfigFromFile(p string) (*APIConfig, error) {
@@ -109,11 +109,6 @@ func APIConfigFromFile(p string) (*APIConfig, error) {
 	return config, nil
 }
 
-type NotificationSettings struct {
-	VAPIDPublicKey  string
-	VAPIDPrivateKey string
-}
-
 func NewApiHandler(basePath string) (*ApiHandler, error) {
 	if err := os.MkdirAll(basePath, 0700); err != nil {
 		return nil, err
@@ -129,17 +124,20 @@ func NewApiHandler(basePath string) (*ApiHandler, error) {
 		if err != nil {
 			return nil, err
 		}
-		config.NotificationSettings = &NotificationSettings{
+		config.NotificationSettings = &feed.NotificationSettings{
 			VAPIDPublicKey:  publicKey,
 			VAPIDPrivateKey: privateKey,
 		}
 	}
 
 	ws := feed.WebSocketManager{}
+
+	fm := feed.NewFeedManager(basePath, &ws)
+	fm.NotificationSettings = config.NotificationSettings
 	result := &ApiHandler{
 		BasePath:         basePath,
 		Config:           *config,
-		FeedManager:      feed.NewFeedManager(basePath, &ws),
+		FeedManager:      fm,
 		WebSocketManager: &ws,
 	}
 
@@ -438,20 +436,7 @@ func (api *ApiHandler) feedPostHandlerFunc(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Send push notifications
-	for _, subscription := range f.Config.Subscriptions {
-		slog.Debug("Sending push notification", slog.String("endpoint", subscription.Endpoint))
-		resp, _ := webpush.SendNotification([]byte(fmt.Sprintf("New item posted to feed %s", f.Name())), &subscription, &webpush.Options{
-			Subscriber:      "example@example.com", // Do not include "mailto:"
-			VAPIDPublicKey:  api.Config.NotificationSettings.VAPIDPublicKey,
-			VAPIDPrivateKey: api.Config.NotificationSettings.VAPIDPrivateKey,
-			TTL:             30,
-		})
-		slog.Debug("Response", slog.Any("resp", resp))
-		defer resp.Body.Close()
-	}
-
-	if _, err = w.Write([]byte("OK")); err != nil {
+	if _, err := w.Write([]byte("OK")); err != nil {
 		slog.Error("Error while writing HTTP response", slog.String("error", err.Error()))
 	}
 }
