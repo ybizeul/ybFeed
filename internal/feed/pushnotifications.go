@@ -12,8 +12,8 @@ var pnLogLevel = new(slog.LevelVar)
 var pnLogger = slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: pnLogLevel})).WithGroup("pushNotification")
 
 func init() {
-	if os.Getenv("DEBUG") != "" || os.Getenv("DEBUG_NOTIFICAtIONS") != "" {
-		fmLogLevel.Set(slog.LevelDebug)
+	if os.Getenv("DEBUG") != "" || os.Getenv("DEBUG_NOTIFICATIONS") != "" {
+		pnLogLevel.Set(slog.LevelDebug)
 	}
 }
 
