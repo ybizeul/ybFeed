@@ -23,28 +23,20 @@ export class YBFeedConnector {
                     credentials: "include"
             })
             .then((f) => {
-                if (f.status !== 200) {
-                    f.text()
-                    .then(text => {
-                        if (!text) {
-                            text="Empty Response"
-                        }
-                        reject(new YBFeedError(f.status, text))
-                    })
+                if (f.ok) {
+                    return f.json()
                 }
                 else {
-                    f.json()
-                    .then(j => {
-                        j.vapidpublickey = f.headers.get("Ybfeed-Vapidpublickey")
-                        for (let i=0;i<j.items.length;i++) {
-                            j.items[i].feed = j
-                        }
-                        resolve(j)
-                    })
-                    .catch((e) => {
-                        reject(new YBFeedError(e.status, "Server Error: " + e.message))
-                    })
+                    reject(new YBFeedError(f.status, "Server Error: " + f.statusText))
                 }
+            })
+            .then((f) => {
+                const result = f
+                result.vapidpublickey = f.vapidpublickey
+                for (let i=0;i<f.items.length;i++) {
+                    result.items[i].feed = f
+                }
+                resolve(result)
             })
             .catch((e) => {
                 reject(new YBFeedError(e.status, "Server Unavailable"))

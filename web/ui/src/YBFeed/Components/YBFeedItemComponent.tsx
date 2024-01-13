@@ -5,7 +5,7 @@ import { notifications } from '@mantine/notifications';
 import { IconPhoto, IconTrash, IconTxt, IconClipboardCopy } from "@tabler/icons-react"
 
 import { YBFeedItemTextComponent, YBFeedItemImageComponent, copyImageItem, FeedItemContext } from '.'
-import { YBFeedConnector, YBFeedItem } from '../'
+import { YBFeedConnector, YBFeedError, YBFeedItem } from '../'
 
 import { defaultNotificationProps } from '../config';
 
@@ -44,6 +44,10 @@ function YBHeadingComponent(props: FeedItemHeadingComponentProps) {
             if (props.onDelete) {
                 props.onDelete()
             }
+        })
+        .catch((e: YBFeedError) => {
+            notifications.show({message: e.message, color: "red"})
+            setDeleteModalOpen(false)
         })
     }
 

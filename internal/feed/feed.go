@@ -1,16 +1,20 @@
 package feed
 
 import (
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"net/http"
 	"net/url"
 	"os"
 	"path"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"golang.org/x/exp/slog"
 )
 
@@ -28,14 +32,17 @@ func init() {
 	}
 }
 
-type FeedError struct {
-	Message string
-	Code    int
-}
-
-func (m *FeedError) Error() string {
-	return m.Message
-}
+var FeedErrorNotFound = errors.New("feed not found")
+var FeedErrorInvalidSecret = errors.New("invalid Secret")
+var FeedErrorAlreadyExists = errors.New("feed already exists")
+var FeedErrorUnableToReadContent = errors.New("unable to read feed content")
+var FeedErrorUnableToReadItemInfo = errors.New("unable to read item info")
+var FeedErrorItemNotFound = errors.New("feed item not found")
+var FeedErrorInvalidContentType = errors.New("invalid content-type")
+var FeedErrorMaxBodySizeExceeded = errors.New("max body size exceeded")
+var FeedErrorItemEmpty = errors.New("feed item is empty")
+var FeedErrorErrorReading = errors.New("error while reading new item")
+var FeedErrorErrorWriting = errors.New("error while reading new item")
 
 type FeedItemType int
 
@@ -45,15 +52,6 @@ const (
 	Binary
 )
 
-// PublicFeed is a version of a feed that does not expose private informations
-// In this context, the feed secret is not a private information as it needs to
-// be transmitted as a cookie to the browser
-type PublicFeed struct {
-	Name   string           `json:"name"`
-	Items  []PublicFeedItem `json:"items"`
-	Secret string           `json:"secret"`
-}
-
 // Feed is the internal representation of a Feed and contains all the
 // informations needed to perform its tasks
 type Feed struct {
@@ -61,6 +59,67 @@ type Feed struct {
 	Config               FeedConfig
 	NotificationSettings *NotificationSettings
 	WebSocketManager     *WebSocketManager
+}
+
+func NewFeed(feedPath string) (*Feed, error) {
+	fLogger.Info("Creating new feed", slog.String("feed", feedPath))
+
+	_, err := os.Stat(feedPath)
+	if err == nil {
+		return nil, FeedErrorAlreadyExists
+	}
+
+	err = os.Mkdir(feedPath, 0700)
+	if err != nil {
+		fLogger.Error("Error creating feed directory", slog.String("directory", feedPath))
+		return nil, err
+	}
+
+	feed := Feed{
+		Path: feedPath,
+		Config: FeedConfig{
+			Secret: uuid.NewString(),
+		},
+	}
+
+	feed.Config.feed = &feed
+
+	err = feed.Config.Write()
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &feed, nil
+}
+
+func GetFeed(feedPath string) (*Feed, error) {
+	if _, err := os.Stat(feedPath); os.IsNotExist(err) {
+		return nil, FeedErrorNotFound
+	}
+	result := &Feed{
+		Path: feedPath,
+	}
+
+	c, err := FeedConfigForFeed(result)
+	if err != nil {
+		return nil, fmt.Errorf("cannot get config for feed '%s': %w", feedPath, err)
+	}
+	c.feed = result
+
+	result.Config = *c
+
+	return result, nil
+}
+
+// PublicFeed is a version of a feed that does not expose private informations
+// In this context, the feed secret is not a private information as it needs to
+// be transmitted as a cookie to the browser
+type PublicFeed struct {
+	Name           string           `json:"name"`
+	Items          []PublicFeedItem `json:"items"`
+	Secret         string           `json:"secret"`
+	VAPIDPublicKey string           `json:"vapid_publickey"`
 }
 
 type PublicFeedItem struct {
@@ -73,21 +132,83 @@ type PublicFeedItem struct {
 func (feed *Feed) Name() string {
 	return path.Base(feed.Path)
 }
+
+func (feed *Feed) Public() (*PublicFeed, error) {
+	items, err := feed.publicItems()
+	if err != nil {
+		return nil, err
+	}
+
+	result := &PublicFeed{
+		Name:   feed.Name(),
+		Items:  items,
+		Secret: feed.Config.Secret,
+	}
+
+	if feed.NotificationSettings != nil {
+		result.VAPIDPublicKey = feed.NotificationSettings.VAPIDPublicKey
+	}
+
+	return result, nil
+}
+
+func (feed *Feed) publicItems() ([]PublicFeedItem, error) {
+	items := []PublicFeedItem{}
+
+	var d []fs.DirEntry
+	var err error
+
+	if d, err = os.ReadDir(feed.Path); err != nil {
+		fLogger.Error("Unable to read feed content")
+
+		return nil, FeedErrorUnableToReadContent
+	}
+
+	for _, f := range d {
+		if f.Name() == "secret" || f.Name() == "pin" || f.Name() == "config.json" {
+			continue
+		}
+		info, err := f.Info()
+		if err != nil {
+			code := 500
+			e := "Unable to read file info"
+
+			fLogger.Error(e, slog.Int("return", code))
+
+			return nil, fmt.Errorf("%w: %s", FeedErrorUnableToReadItemInfo, f.Name())
+		}
+
+		var itemType FeedItemType
+		if strings.HasSuffix(f.Name(), ".txt") {
+			itemType = Text
+		} else if strings.HasSuffix(f.Name(), ".png") || strings.HasSuffix(f.Name(), ".jpg") {
+			itemType = Image
+		} else {
+			itemType = Binary
+		}
+		items = append(items, PublicFeedItem{
+			Name: f.Name(),
+			Date: info.ModTime(),
+			Type: itemType,
+			Feed: &PublicFeed{Name: feed.Name()},
+		})
+	}
+	sort.Slice(items, func(i, j2 int) bool {
+		return items[i].Date.After(items[j2].Date)
+	})
+
+	return items, nil
+}
+
 func (feed *Feed) GetPublicItem(i string) (*PublicFeedItem, error) {
 
 	s, err := os.Stat(path.Join(feed.Path, i))
 
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, &FeedError{
-				Code:    404,
-				Message: fmt.Sprintf("Feed does not exists (%s)", feed.Name()),
-			}
+			return nil, fmt.Errorf("%w: %s", FeedErrorItemNotFound, i)
 		}
-		return nil, &FeedError{
-			Code:    500,
-			Message: fmt.Sprintf("Unable to open feed (%s)", feed.Name()),
-		}
+		return nil, err
 	}
 
 	var itemType FeedItemType
@@ -108,6 +229,7 @@ func (feed *Feed) GetPublicItem(i string) (*PublicFeedItem, error) {
 		},
 	}, nil
 }
+
 func (feed *Feed) GetItemData(item string) ([]byte, error) {
 	// Read item content
 	fLogger.Debug("Getting Item", slog.String("feed", feed.Name()), slog.String("name", item))
@@ -116,37 +238,22 @@ func (feed *Feed) GetItemData(item string) ([]byte, error) {
 	content, err := os.ReadFile(filePath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, &FeedError{
-				Code:    404,
-				Message: fmt.Sprintf("File does not exists (%s)", filePath),
-			}
+			return nil, fmt.Errorf("%w: %s", FeedErrorItemNotFound, item)
 		}
-		return nil, &FeedError{
-			Code:    500,
-			Message: fmt.Sprintf("Unable to open file '%s' for read", filePath),
-		}
+		return nil, err
 	}
 	return content, nil
 }
 
 func (feed *Feed) IsSecretValid(secret string) error {
 	if secret == "" {
-		code := 401
-		fLogger.Error("No secret was provided", slog.Int("return", code))
-		return &FeedError{
-			Code:    code,
-			Message: "Unauthorized",
-		}
+		return FeedErrorInvalidSecret
 	}
 
 	if len(secret) != 4 {
 		if feed.Config.Secret != secret {
-			code := 401
-			fLogger.Error("Invalid secret", slog.Int("return", code))
-			return &FeedError{
-				Code:    code,
-				Message: "Authentication failed",
-			}
+			fLogger.Error("Invalid secret")
+			return FeedErrorInvalidSecret
 		}
 	} else {
 		err := feed.Config.PIN.IsValid(secret)
@@ -176,32 +283,20 @@ func (f *Feed) AddItem(contentType string, r io.ReadCloser) error {
 	template := filenameTemplate[contentType]
 
 	if len(ext) == 0 {
-		return &FeedError{
-			Code:    400,
-			Message: "Content-type not accepted",
-		}
+		return fmt.Errorf("%w: %s", FeedErrorInvalidContentType, contentType)
 	}
 
 	content, err := io.ReadAll(r)
 	if err != nil {
-		_, ok := err.(*http.MaxBytesError)
+		e, ok := err.(*http.MaxBytesError)
 		if ok {
-			return &FeedError{
-				Code:    413,
-				Message: "Max body size exceeded",
-			}
+			return fmt.Errorf("%w: %d", FeedErrorMaxBodySizeExceeded, e.Limit)
 		}
-		return &FeedError{
-			Code:    500,
-			Message: "Unable to read stream",
-		}
+		return err
 	}
 
 	if len(content) == 0 {
-		return &FeedError{
-			Code:    500,
-			Message: "Content is empty",
-		}
+		return fmt.Errorf("%w: %s %s", FeedErrorItemEmpty, f.Path, template)
 	}
 
 	fileIndex := 1
@@ -210,10 +305,7 @@ func (f *Feed) AddItem(contentType string, r io.ReadCloser) error {
 		filename = fmt.Sprintf("%s %d", template, fileIndex)
 		matches, err := filepath.Glob(path.Join(f.Path, filename) + ".*")
 		if err != nil {
-			return &FeedError{
-				Code:    500,
-				Message: "Unable to read feed content",
-			}
+			return fmt.Errorf("%w: %s", FeedErrorErrorReading, filename)
 		}
 		if len(matches) == 0 {
 			break
@@ -221,12 +313,10 @@ func (f *Feed) AddItem(contentType string, r io.ReadCloser) error {
 		fileIndex++
 	}
 
-	err = os.WriteFile(path.Join(f.Path, filename+"."+ext), content, 0600)
+	filePath := path.Join(f.Path, filename+"."+ext)
+	err = os.WriteFile(filePath, content, 0600)
 	if err != nil {
-		return &FeedError{
-			Code:    500,
-			Message: "Unable to write file",
-		}
+		return fmt.Errorf("%w: %s", FeedErrorErrorWriting, filePath)
 	}
 
 	f.sendPushNotification()
@@ -238,10 +328,7 @@ func (f *Feed) AddItem(contentType string, r io.ReadCloser) error {
 	}
 
 	if err = f.WebSocketManager.NotifyAdd(publicItem); err != nil {
-		return &FeedError{
-			Code:    500,
-			Message: err.Error(),
-		}
+		return err
 	}
 
 	fLogger.Debug("Added Item", slog.String("name", filename+"."+ext), slog.String("feed", f.Path), slog.String("content-type", contentType))
@@ -261,22 +348,13 @@ func (f *Feed) RemoveItem(item string) error {
 	err = os.Remove(itemPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return &FeedError{
-				Code:    404,
-				Message: err.Error(),
-			}
+			return fmt.Errorf("%w: %s", FeedErrorItemNotFound, itemPath)
 		}
-		return &FeedError{
-			Code:    500,
-			Message: err.Error(),
-		}
+		return err
 	}
 
 	if err = f.WebSocketManager.NotifyRemove(publicItem); err != nil {
-		return &FeedError{
-			Code:    500,
-			Message: err.Error(),
-		}
+		return err
 	}
 
 	slog.Debug("Removed Item", slog.String("name", item), slog.String("feed", f.Name()))

@@ -1,6 +1,7 @@
 package feed
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -108,7 +109,16 @@ func (m *WebSocketManager) RunSocketForFeed(feedName string, w http.ResponseWrit
 		}
 		switch strings.TrimSpace(string(message)) {
 		case "feed":
-			pf, err := m.FeedManager.GetPublicFeed(feedName, secret)
+			f, err := m.FeedManager.GetFeed(feedName)
+			if ferr := f.IsSecretValid(secret); err != nil {
+				if errors.Is(ferr, FeedErrorInvalidSecret) {
+					utils.CloseWithCodeAndMessage(w, 401, "invalid secret")
+				}
+			}
+			if err != nil {
+				utils.CloseWithCodeAndMessage(w, 500, err.Error())
+			}
+			pf, err := f.Public()
 			if err != nil {
 				utils.CloseWithCodeAndMessage(w, 500, err.Error())
 			}

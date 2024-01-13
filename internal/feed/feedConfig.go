@@ -3,6 +3,7 @@ package feed
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path"
 	"time"
@@ -10,6 +11,13 @@ import (
 	"github.com/Appboy/webpush-go"
 	"golang.org/x/exp/slog"
 )
+
+var FeedConfigErrorCantWrite = errors.New("can't write feed configuration")
+var FeedConfigErrorNotFound = errors.New("feed configuration not found")
+var FeedConfigErrorInvalid = errors.New("feed configuration invalid")
+var FeedConfigErrorPinExpired = errors.New("feed pin expired")
+var FeedConfigErrorPinIncorrect = errors.New("feed pin incorrect")
+var FeedConfigErrorPinIncorrectLength = errors.New("feed pin length is not 4")
 
 type FeedConfig struct {
 	Secret        string `json:"secret"`
@@ -74,18 +82,12 @@ func FeedConfigForFeed(f *Feed) (*FeedConfig, error) {
 	b, err := os.ReadFile(configPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, &FeedError{
-				Code:    500,
-				Message: "Configuration does not exists",
-			}
+			return nil, fmt.Errorf("%w: %s", FeedConfigErrorNotFound, configPath)
 		}
 	}
 	err = json.Unmarshal(b, result)
 	if err != nil {
-		return nil, &FeedError{
-			Code:    500,
-			Message: "Unable to read configuration",
-		}
+		return nil, fmt.Errorf("%w: %s", FeedConfigErrorInvalid, configPath)
 	}
 	return result, nil
 }
@@ -93,23 +95,21 @@ func FeedConfigForFeed(f *Feed) (*FeedConfig, error) {
 func (config *FeedConfig) Write() error {
 	b, err := json.Marshal(config)
 	if err != nil {
-		return &FeedError{
-			Code:    500,
-			Message: "Unable to create configuration",
-		}
+		return err
 	}
 
-	err = os.WriteFile(path.Join(config.feed.Path, "config.json"), b, 0600)
+	configPath := path.Join(config.feed.Path, "config.json")
+	err = os.WriteFile(configPath, b, 0600)
 	if err != nil {
-		return &FeedError{
-			Code:    500,
-			Message: "Unable to write configuration",
-		}
+		return fmt.Errorf("%w: %s", FeedConfigErrorCantWrite, configPath)
 	}
 	return nil
 }
 
 func (config *FeedConfig) SetPIN(s string) error {
+	if len(s) != 4 {
+		return FeedConfigErrorPinIncorrectLength
+	}
 	pin := &PIN{
 		PIN:        s,
 		Expiration: time.Now().Add(2 * time.Minute),
@@ -155,19 +155,11 @@ func (config *FeedConfig) DeleteSubscription(s webpush.Subscription) error {
 
 func (p *PIN) IsValid(s string) error {
 	if p.Expiration.Before(time.Now()) {
-		code := 401
-		slog.Warn("PIN expired", slog.Int("return", code))
-		return &FeedError{
-			Code:    code,
-			Message: "Pin Expired",
-		}
+		slog.Warn("PIN expired")
+		return FeedConfigErrorPinExpired
 	}
 	if s != p.PIN {
-		code := 401
-		return &FeedError{
-			Code:    code,
-			Message: "PIN Incorrect",
-		}
+		return FeedConfigErrorPinIncorrect
 	}
 
 	return nil
