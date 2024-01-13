@@ -119,7 +119,7 @@ type PublicFeed struct {
 	Name           string           `json:"name"`
 	Items          []PublicFeedItem `json:"items"`
 	Secret         string           `json:"secret"`
-	VAPIDPublicKey string           `json:"vapid_publickey"`
+	VAPIDPublicKey string           `json:"vapidpublickey"`
 }
 
 type PublicFeedItem struct {

@@ -2,6 +2,7 @@ package feed
 
 import (
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/Appboy/webpush-go"
@@ -31,7 +32,10 @@ func (f *Feed) sendPushNotification() error {
 			VAPIDPrivateKey: f.NotificationSettings.VAPIDPrivateKey,
 			TTL:             30,
 		})
-		pnLogger.Debug("Response", slog.Any("resp", resp))
+		if pnLogLevel.Level() == slog.LevelDebug {
+			b, _ := io.ReadAll(resp.Body)
+			pnLogger.Debug("Response", slog.String("resp", string(b)), slog.String("status", resp.Status))
+		}
 		defer resp.Body.Close()
 	}
 	return nil

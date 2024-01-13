@@ -59,6 +59,7 @@ export function YBFeedFeed() {
             .then((f) => {
                 if (f && f.secret) {
                     setSecret(f.secret)
+                    setVapid(f.vapidpublickey)
                 }
             })
             .catch((e) => {
@@ -71,20 +72,6 @@ export function YBFeedFeed() {
             })
         }
     },[secret,connection,feedParam])
-
-    // Get notification public key
-    useEffect(() => {
-        connection.Ping()
-        .then((r) => {
-            if (r) {
-                const v = r.get("Ybfeed-Vapidpublickey")
-                if (v) {
-                    setVapid(v)
-                }
-            }
-        })
-    })
-
 
     useEffect(() => {
         if (readyState === ReadyState.OPEN) {
