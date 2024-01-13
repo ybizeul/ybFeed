@@ -24,7 +24,6 @@ type FeedManager struct {
 }
 
 func NewFeedManager(path string, w *WebSocketManager) *FeedManager {
-
 	result := &FeedManager{
 		path:             path,
 		websocketManager: w,
@@ -36,6 +35,7 @@ func (m *FeedManager) GetFeed(feedName string) (*Feed, error) {
 	feedPath := path.Join(m.path, feedName)
 
 	result, err := GetFeed(feedPath)
+
 	if err != nil {
 		return nil, fmt.Errorf("cannot get feed '%s': %w", feedName, err)
 	}
