@@ -9,6 +9,7 @@ import (
 )
 
 var HTTP_PORT int
+var LISTEN_ADDR string
 var DEBUG bool
 var dataDir string
 var maxBodySize int
@@ -29,6 +30,14 @@ func main() {
 				EnvVars:     []string{"YBF_HTTP_PORT"},
 				Usage:       "TCP Port to listen",
 				Destination: &HTTP_PORT,
+			},
+			&cli.StringFlag{
+				Name:        "address",
+				Aliases:     []string{"b"},
+				Value:       "0.0.0.0",
+				EnvVars:     []string{"YBF_LISTEN_ADDR"},
+				Usage:       "IP address to bind",
+				Destination: &LISTEN_ADDR,
 			},
 			&cli.BoolFlag{
 				Name:        "debug",
@@ -83,6 +92,7 @@ func run() {
 	api.Version = version
 	api.MaxBodySize = maxBodySize * 1024 * 1024
 	api.HttpPort = HTTP_PORT
+	api.ListenAddr = LISTEN_ADDR
 
 	api.StartServer()
 }

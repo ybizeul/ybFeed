@@ -51,6 +51,7 @@ the filesystem
 |---------------|-------------|
 | `YBF_DATA_DIR` | points to an alternative direcotry to store data, default is `./data/` in current directory. |
 | `YBF_HTTP_PORT` | TCP port to run the server, default is `8080`. |
+| `YBF_LISTEN_ADDR` | IP address to bind, default is `0.0.0.0`. |
 
 ### Installation
 

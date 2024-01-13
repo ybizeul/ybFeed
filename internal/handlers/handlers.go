@@ -85,6 +85,7 @@ type ApiHandler struct {
 	MaxBodySize      int
 	Config           APIConfig
 	HttpPort         int
+	ListenAddr       string
 	WebSocketManager *feed.WebSocketManager
 	FeedManager      *feed.FeedManager
 }
@@ -164,7 +165,7 @@ func (api *ApiHandler) WriteConfig() error {
 }
 func (api *ApiHandler) StartServer() {
 	r := api.GetServer()
-	err := http.ListenAndServe(fmt.Sprintf(":%d", api.HttpPort), r)
+	err := http.ListenAndServe(fmt.Sprintf("%s:%d", api.ListenAddr, api.HttpPort), r)
 	if err != nil {
 		logger.Error("Unable to start HTTP server",
 			slog.String("error", err.Error()))
@@ -209,6 +210,7 @@ func (api *ApiHandler) GetServer() *chi.Mux {
 		slog.String("version", api.Version),
 		slog.String("data_dir", api.BasePath),
 		slog.Int("port", api.HttpPort),
+		slog.String("address", api.ListenAddr),
 		slog.Int("max-upload-size", api.MaxBodySize))
 
 	return r
