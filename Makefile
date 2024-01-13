@@ -15,7 +15,7 @@ ui-run: ui run
 
 run:
 	GOFLAGS="-ldflags=-X=main.version=$(VERSION)" \
-	go run cmd/ybfeed/*.go
+	go run cmd/ybfeed/*.go -b 127.0.0.1
 
 push: ui
 	GOFLAGS="-ldflags=-X=main.version=$(VERSION)" ko build -B -t latest ./cmd/ybfeed/
