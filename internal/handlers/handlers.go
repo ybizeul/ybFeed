@@ -226,22 +226,12 @@ func (api *ApiHandler) feedWSHandler(w http.ResponseWriter, r *http.Request) {
 		utils.CloseWithCodeAndMessage(w, 500, "Unable to obtain feed name")
 	}
 
-	f, err := api.FeedManager.GetFeed(feedName)
+	_, err := api.FeedManager.GetFeedWithAuth(feedName, secret)
 
 	if err != nil {
 		switch {
 		case errors.Is(err, feed.FeedErrorNotFound):
 			utils.CloseWithCodeAndMessage(w, 404, fmt.Sprintf("feed '%s' not found", feedName))
-		default:
-			utils.CloseWithCodeAndMessage(w, 500, fmt.Sprintf("Error while getting feed: %s", err.Error()))
-		}
-		return
-	}
-
-	err = f.IsSecretValid(secret)
-
-	if err != nil {
-		switch {
 		case errors.Is(err, feed.FeedErrorInvalidSecret):
 			utils.CloseWithCodeAndMessage(w, 401, "Unauthorized")
 		default:
@@ -323,22 +313,13 @@ func (api *ApiHandler) feedPatchHandlerFunc(w http.ResponseWriter, r *http.Reque
 	if feedName == "" {
 		utils.CloseWithCodeAndMessage(w, 500, "Unable to obtain feed name")
 	}
-	f, err := api.FeedManager.GetFeed(feedName)
+
+	f, err := api.FeedManager.GetFeedWithAuth(feedName, secret)
 
 	if err != nil {
 		switch {
 		case errors.Is(err, feed.FeedErrorNotFound):
 			utils.CloseWithCodeAndMessage(w, 404, fmt.Sprintf("feed '%s' not found", feedName))
-		default:
-			utils.CloseWithCodeAndMessage(w, 500, fmt.Sprintf("Error while getting feed: %s", err.Error()))
-		}
-		return
-	}
-
-	err = f.IsSecretValid(secret)
-
-	if err != nil {
-		switch {
 		case errors.Is(err, feed.FeedErrorInvalidSecret):
 			utils.CloseWithCodeAndMessage(w, 401, "Unauthorized")
 		default:
@@ -376,22 +357,12 @@ func (api *ApiHandler) feedItemHandlerFunc(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	f, err := api.FeedManager.GetFeed(feedName)
+	f, err := api.FeedManager.GetFeedWithAuth(feedName, secret)
 
 	if err != nil {
 		switch {
 		case errors.Is(err, feed.FeedErrorNotFound):
 			utils.CloseWithCodeAndMessage(w, 404, fmt.Sprintf("feed '%s' not found", feedName))
-		default:
-			utils.CloseWithCodeAndMessage(w, 500, fmt.Sprintf("Error while getting feed: %s", err.Error()))
-		}
-		return
-	}
-
-	err = f.IsSecretValid(secret)
-
-	if err != nil {
-		switch {
 		case errors.Is(err, feed.FeedErrorInvalidSecret):
 			utils.CloseWithCodeAndMessage(w, 401, "Unauthorized")
 		default:
@@ -431,22 +402,12 @@ func (api *ApiHandler) feedPostHandlerFunc(w http.ResponseWriter, r *http.Reques
 		utils.CloseWithCodeAndMessage(w, 500, "Unable to obtain feed name")
 	}
 
-	f, err := api.FeedManager.GetFeed(feedName)
+	f, err := api.FeedManager.GetFeedWithAuth(feedName, secret)
 
 	if err != nil {
 		switch {
 		case errors.Is(err, feed.FeedErrorNotFound):
 			utils.CloseWithCodeAndMessage(w, 404, fmt.Sprintf("feed '%s' not found", feedName))
-		default:
-			utils.CloseWithCodeAndMessage(w, 500, fmt.Sprintf("Error while getting feed: %s", err.Error()))
-		}
-		return
-	}
-
-	err = f.IsSecretValid(secret)
-
-	if err != nil {
-		switch {
 		case errors.Is(err, feed.FeedErrorInvalidSecret):
 			utils.CloseWithCodeAndMessage(w, 401, "Unauthorized")
 		default:
@@ -486,22 +447,12 @@ func (api *ApiHandler) feedItemDeleteHandlerFunc(w http.ResponseWriter, r *http.
 		utils.CloseWithCodeAndMessage(w, 500, "Unable to obtain feed name")
 	}
 
-	f, err := api.FeedManager.GetFeed(feedName)
+	f, err := api.FeedManager.GetFeedWithAuth(feedName, secret)
 
 	if err != nil {
 		switch {
 		case errors.Is(err, feed.FeedErrorNotFound):
 			utils.CloseWithCodeAndMessage(w, 404, fmt.Sprintf("feed '%s' not found", feedName))
-		default:
-			utils.CloseWithCodeAndMessage(w, 500, fmt.Sprintf("Error while getting feed: %s", err.Error()))
-		}
-		return
-	}
-
-	err = f.IsSecretValid(secret)
-
-	if err != nil {
-		switch {
 		case errors.Is(err, feed.FeedErrorInvalidSecret):
 			utils.CloseWithCodeAndMessage(w, 401, "Unauthorized")
 		default:
@@ -542,22 +493,12 @@ func (api *ApiHandler) feedSubscriptionHandlerFunc(w http.ResponseWriter, r *htt
 		utils.CloseWithCodeAndMessage(w, 500, "Unable to obtain feed name")
 	}
 
-	f, err := api.FeedManager.GetFeed(feedName)
+	f, err := api.FeedManager.GetFeedWithAuth(feedName, secret)
 
 	if err != nil {
 		switch {
 		case errors.Is(err, feed.FeedErrorNotFound):
 			utils.CloseWithCodeAndMessage(w, 404, fmt.Sprintf("feed '%s' not found", feedName))
-		default:
-			utils.CloseWithCodeAndMessage(w, 500, fmt.Sprintf("Error while getting feed: %s", err.Error()))
-		}
-		return
-	}
-
-	err = f.IsSecretValid(secret)
-
-	if err != nil {
-		switch {
 		case errors.Is(err, feed.FeedErrorInvalidSecret):
 			utils.CloseWithCodeAndMessage(w, 401, "Unauthorized")
 		default:
@@ -603,22 +544,12 @@ func (api *ApiHandler) feedUnsubscribeHandlerFunc(w http.ResponseWriter, r *http
 		utils.CloseWithCodeAndMessage(w, 500, "Unable to obtain feed name")
 	}
 
-	f, err := api.FeedManager.GetFeed(feedName)
+	f, err := api.FeedManager.GetFeedWithAuth(feedName, secret)
 
 	if err != nil {
 		switch {
 		case errors.Is(err, feed.FeedErrorNotFound):
 			utils.CloseWithCodeAndMessage(w, 404, fmt.Sprintf("feed '%s' not found", feedName))
-		default:
-			utils.CloseWithCodeAndMessage(w, 500, fmt.Sprintf("Error while getting feed: %s", err.Error()))
-		}
-		return
-	}
-
-	err = f.IsSecretValid(secret)
-
-	if err != nil {
-		switch {
 		case errors.Is(err, feed.FeedErrorInvalidSecret):
 			utils.CloseWithCodeAndMessage(w, 401, "Unauthorized")
 		default:
@@ -626,6 +557,7 @@ func (api *ApiHandler) feedUnsubscribeHandlerFunc(w http.ResponseWriter, r *http
 		}
 		return
 	}
+
 	body, err := io.ReadAll(r.Body)
 
 	defer r.Body.Close()

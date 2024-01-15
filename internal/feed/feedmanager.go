@@ -32,3 +32,19 @@ func (m *FeedManager) GetFeed(feedName string) (*Feed, error) {
 
 	return result, nil
 }
+
+func (m *FeedManager) GetFeedWithAuth(feedName string, secret string) (*Feed, error) {
+	result, err := m.GetFeed(feedName)
+
+	if err != nil {
+		return nil, err
+	}
+
+	err = result.IsSecretValid(secret)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
