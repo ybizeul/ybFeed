@@ -1,3 +1,4 @@
+// Package feed implements
 package feed
 
 import (
@@ -15,22 +16,42 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/ybizeul/ybfeed/pkg/yblog"
 	"golang.org/x/exp/slog"
 )
 
-type NotificationSettings struct {
-	VAPIDPublicKey  string
-	VAPIDPrivateKey string
+// PublicFeed is a version of a feed meant to provide a json representation of
+// a feed that does not expose private informations
+// In this context, the feed secret is not a private information as it needs to
+// be transmitted as a cookie to the browser
+type PublicFeed struct {
+	Name           string           `json:"name"`
+	Items          []PublicFeedItem `json:"items"`
+	Secret         string           `json:"secret"`
+	VAPIDPublicKey string           `json:"vapidpublickey"`
 }
 
-var fLogLevel = new(slog.LevelVar)
-var fLogger = slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: fLogLevel})).WithGroup("feedManager")
-
-func init() {
-	if os.Getenv("DEBUG") != "" || os.Getenv("DEBUG_FEED") != "" {
-		fLogLevel.Set(slog.LevelDebug)
-	}
+// PublicFeedItem is used to provide a json representation of a feed item.
+type PublicFeedItem struct {
+	Name string       `json:"name"`
+	Date time.Time    `json:"date"`
+	Type FeedItemType `json:"type"`
+	Feed *PublicFeed  `json:"feed"`
 }
+
+// FeedItemType defines the type of an item in the feed
+type FeedItemType int
+
+const (
+	Text = iota
+	Image
+	Binary
+)
+
+// var fLogLevel = new(slog.LevelVar)
+// var fLogger = slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: fLogLevel})).WithGroup("feedManager")
+
+var fL = yblog.NewYBLogger("feed", []string{"DEBUG", "DEBUG_FEED"})
 
 var FeedErrorNotFound = errors.New("feed not found")
 var FeedErrorInvalidSecret = errors.New("invalid Secret")
@@ -44,14 +65,6 @@ var FeedErrorItemEmpty = errors.New("feed item is empty")
 var FeedErrorErrorReading = errors.New("error while reading new item")
 var FeedErrorErrorWriting = errors.New("error while reading new item")
 
-type FeedItemType int
-
-const (
-	Text = iota
-	Image
-	Binary
-)
-
 // Feed is the internal representation of a Feed and contains all the
 // informations needed to perform its tasks
 type Feed struct {
@@ -61,8 +74,13 @@ type Feed struct {
 	WebSocketManager     *WebSocketManager
 }
 
+type NotificationSettings struct {
+	VAPIDPublicKey  string
+	VAPIDPrivateKey string
+}
+
 func NewFeed(feedPath string) (*Feed, error) {
-	fLogger.Info("Creating new feed", slog.String("feed", feedPath))
+	fL.Logger.Info("Creating new feed", slog.String("feed", feedPath))
 
 	_, err := os.Stat(feedPath)
 	if err == nil {
@@ -71,7 +89,7 @@ func NewFeed(feedPath string) (*Feed, error) {
 
 	err = os.Mkdir(feedPath, 0700)
 	if err != nil {
-		fLogger.Error("Error creating feed directory", slog.String("directory", feedPath))
+		fL.Logger.Error("Error creating feed directory", slog.String("directory", feedPath))
 		return nil, err
 	}
 
@@ -112,23 +130,6 @@ func GetFeed(feedPath string) (*Feed, error) {
 	return result, nil
 }
 
-// PublicFeed is a version of a feed that does not expose private informations
-// In this context, the feed secret is not a private information as it needs to
-// be transmitted as a cookie to the browser
-type PublicFeed struct {
-	Name           string           `json:"name"`
-	Items          []PublicFeedItem `json:"items"`
-	Secret         string           `json:"secret"`
-	VAPIDPublicKey string           `json:"vapidpublickey"`
-}
-
-type PublicFeedItem struct {
-	Name string       `json:"name"`
-	Date time.Time    `json:"date"`
-	Type FeedItemType `json:"type"`
-	Feed *PublicFeed  `json:"feed"`
-}
-
 func (feed *Feed) Name() string {
 	return path.Base(feed.Path)
 }
@@ -159,7 +160,7 @@ func (feed *Feed) publicItems() ([]PublicFeedItem, error) {
 	var err error
 
 	if d, err = os.ReadDir(feed.Path); err != nil {
-		fLogger.Error("Unable to read feed content")
+		fL.Logger.Error("Unable to read feed content")
 
 		return nil, FeedErrorUnableToReadContent
 	}
@@ -173,7 +174,7 @@ func (feed *Feed) publicItems() ([]PublicFeedItem, error) {
 			code := 500
 			e := "Unable to read file info"
 
-			fLogger.Error(e, slog.Int("return", code))
+			fL.Logger.Error(e, slog.Int("return", code))
 
 			return nil, fmt.Errorf("%w: %s", FeedErrorUnableToReadItemInfo, f.Name())
 		}
@@ -232,7 +233,7 @@ func (feed *Feed) GetPublicItem(i string) (*PublicFeedItem, error) {
 
 func (feed *Feed) GetItemData(item string) ([]byte, error) {
 	// Read item content
-	fLogger.Debug("Getting Item", slog.String("feed", feed.Name()), slog.String("name", item))
+	fL.Logger.Debug("Getting Item", slog.String("feed", feed.Name()), slog.String("name", item))
 	var content []byte
 	filePath := path.Join(feed.Path, item)
 	content, err := os.ReadFile(filePath)
@@ -252,7 +253,7 @@ func (feed *Feed) IsSecretValid(secret string) error {
 
 	if len(secret) != 4 {
 		if feed.Config.Secret != secret {
-			fLogger.Error("Invalid secret")
+			fL.Logger.Error("Invalid secret")
 			return FeedErrorInvalidSecret
 		}
 	} else {
@@ -266,7 +267,7 @@ func (feed *Feed) IsSecretValid(secret string) error {
 }
 
 func (f *Feed) AddItem(contentType string, r io.ReadCloser) error {
-	fLogger.Debug("Adding Item", slog.String("feed", f.Name()), slog.String("content-type", contentType))
+	fL.Logger.Debug("Adding Item", slog.String("feed", f.Name()), slog.String("content-type", contentType))
 	fileExtensions := map[string]string{
 		"image/png":  "png",
 		"image/jpeg": "jpg",
@@ -331,7 +332,7 @@ func (f *Feed) AddItem(contentType string, r io.ReadCloser) error {
 		return err
 	}
 
-	fLogger.Debug("Added Item", slog.String("name", filename+"."+ext), slog.String("feed", f.Path), slog.String("content-type", contentType))
+	fL.Logger.Debug("Added Item", slog.String("name", filename+"."+ext), slog.String("feed", f.Path), slog.String("content-type", contentType))
 
 	return nil
 }

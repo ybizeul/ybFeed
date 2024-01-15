@@ -4,23 +4,16 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
 	"strings"
 
 	"github.com/gorilla/websocket"
 	ws "github.com/gorilla/websocket"
 	"github.com/ybizeul/ybfeed/internal/utils"
+	"github.com/ybizeul/ybfeed/pkg/yblog"
 	"golang.org/x/exp/slog"
 )
 
-var logLevel = new(slog.LevelVar)
-var logger = slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: logLevel}))
-
-func init() {
-	if os.Getenv("DEBUG_WEBSOCKET") != "" {
-		logLevel.Set(slog.LevelDebug)
-	}
-}
+var wsL = yblog.NewYBLogger("push", []string{"DEBUG", "DEBUG_WEBSOCKET"})
 
 type FeedSockets struct {
 	feedName   string
@@ -33,14 +26,14 @@ type FeedNotification struct {
 }
 
 func (fs *FeedSockets) RemoveConn(c *ws.Conn) {
-	logger.Debug("Removing connection",
+	wsL.Logger.Debug("Removing connection",
 		slog.Int("count", len(fs.websockets)),
 		slog.Any("connections", fs.websockets),
 		slog.String("connection", fmt.Sprintf("%p", c)))
 	for i, conn := range fs.websockets {
-		logger.Debug("Current connection", slog.String("connection", fmt.Sprintf("%p", conn)))
+		wsL.Logger.Debug("Current connection", slog.String("connection", fmt.Sprintf("%p", conn)))
 		if conn == c {
-			logger.Debug("Found connection", slog.String("connection", fmt.Sprintf("%p", conn)))
+			wsL.Logger.Debug("Found connection", slog.String("connection", fmt.Sprintf("%p", conn)))
 			fs.websockets[i] = fs.websockets[len(fs.websockets)-1]
 			fs.websockets = fs.websockets[:len(fs.websockets)-1]
 		}
@@ -61,7 +54,7 @@ func NewWebSocketManager(fm *FeedManager) *WebSocketManager {
 var upgrader = websocket.Upgrader{} // use default options
 
 func (m *WebSocketManager) FeedSocketsForFeed(feedName string) *FeedSockets {
-	logger.Debug("Searching FeedSockets", slog.Int("count", len(m.FeedSockets)), slog.String("feedName", feedName))
+	wsL.Logger.Debug("Searching FeedSockets", slog.Int("count", len(m.FeedSockets)), slog.String("feedName", feedName))
 
 	for _, fs := range m.FeedSockets {
 		if fs.feedName == feedName {
@@ -77,18 +70,18 @@ func (m *WebSocketManager) RunSocketForFeed(feedName string, w http.ResponseWrit
 	feedSockets := m.FeedSocketsForFeed(feedName)
 
 	if feedSockets == nil {
-		logger.Debug("Adding FeedSockets", slog.Int("count_before", len(m.FeedSockets)), slog.String("feedName", feedName))
+		wsL.Logger.Debug("Adding FeedSockets", slog.Int("count_before", len(m.FeedSockets)), slog.String("feedName", feedName))
 		feedSockets = &FeedSockets{
 			feedName: feedName,
 		}
 		m.FeedSockets = append(m.FeedSockets, feedSockets)
 	}
 
-	logger.Debug("Adding connection", slog.Int("count", len(feedSockets.websockets)))
+	wsL.Logger.Debug("Adding connection", slog.Int("count", len(feedSockets.websockets)))
 	feedSockets.websockets = append(feedSockets.websockets, c)
-	logger.Debug("Added connection", slog.Int("count", len(feedSockets.websockets)))
+	wsL.Logger.Debug("Added connection", slog.Int("count", len(feedSockets.websockets)))
 
-	logger.Debug("WebSocket added", slog.Int("array size", len(feedSockets.websockets)))
+	wsL.Logger.Debug("WebSocket added", slog.Int("array size", len(feedSockets.websockets)))
 
 	if err != nil {
 		utils.CloseWithCodeAndMessage(w, 500, "Unable to upgrade WebSocket")
@@ -102,7 +95,7 @@ func (m *WebSocketManager) RunSocketForFeed(feedName string, w http.ResponseWrit
 
 	for {
 		mt, message, err := c.ReadMessage()
-		logger.Debug("Message Received", slog.String("message", string(message)), slog.Int("messageType", mt))
+		wsL.Logger.Debug("Message Received", slog.String("message", string(message)), slog.Int("messageType", mt))
 		if err != nil {
 			slog.Error("Error reading message", slog.String("error", err.Error()), slog.Int("messageType", mt))
 			break
@@ -131,11 +124,11 @@ func (m *WebSocketManager) RunSocketForFeed(feedName string, w http.ResponseWrit
 }
 
 func (m *WebSocketManager) NotifyAdd(item *PublicFeedItem) error {
-	logger.Debug("Notify websocket", slog.Any("item", item), slog.Int("ws count", len(m.FeedSockets)))
+	wsL.Logger.Debug("Notify websocket", slog.Any("item", item), slog.Int("ws count", len(m.FeedSockets)))
 	for _, f := range m.FeedSockets {
-		logger.Debug("checking feed", slog.String("feedName", f.feedName))
+		wsL.Logger.Debug("checking feed", slog.String("feedName", f.feedName))
 		if f.feedName == item.Feed.Name {
-			logger.Debug("Found feed", slog.String("feedName", f.feedName))
+			wsL.Logger.Debug("Found feed", slog.String("feedName", f.feedName))
 			for _, w := range f.websockets {
 				if err := w.WriteJSON(FeedNotification{
 					Action: "add",
@@ -150,11 +143,11 @@ func (m *WebSocketManager) NotifyAdd(item *PublicFeedItem) error {
 }
 
 func (m *WebSocketManager) NotifyRemove(item *PublicFeedItem) error {
-	logger.Debug("Notify websocket", slog.Any("item", item), slog.Int("ws count", len(m.FeedSockets)))
+	wsL.Logger.Debug("Notify websocket", slog.Any("item", item), slog.Int("ws count", len(m.FeedSockets)))
 	for _, f := range m.FeedSockets {
-		logger.Debug("checking feed", slog.String("feedName", f.feedName))
+		wsL.Logger.Debug("checking feed", slog.String("feedName", f.feedName))
 		if f.feedName == item.Feed.Name {
-			logger.Debug("Found feed", slog.String("feedName", f.feedName))
+			wsL.Logger.Debug("Found feed", slog.String("feedName", f.feedName))
 			for _, w := range f.websockets {
 				if err := w.WriteJSON(FeedNotification{
 					Action: "remove",

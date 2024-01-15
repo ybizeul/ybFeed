@@ -2,20 +2,8 @@ package feed
 
 import (
 	"fmt"
-	"os"
 	"path"
-
-	"golang.org/x/exp/slog"
 )
-
-var fmLogLevel = new(slog.LevelVar)
-var fmLogger = slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: fmLogLevel})).WithGroup("feedManager")
-
-func init() {
-	if os.Getenv("DEBUG") != "" || os.Getenv("DEBUG_FEEDMANAGER") != "" {
-		fmLogLevel.Set(slog.LevelDebug)
-	}
-}
 
 type FeedManager struct {
 	path                 string
