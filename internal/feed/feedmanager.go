@@ -6,9 +6,10 @@ import (
 )
 
 type FeedManager struct {
-	path                 string
-	websocketManager     *WebSocketManager
 	NotificationSettings *NotificationSettings
+
+	path             string
+	websocketManager *WebSocketManager
 }
 
 func NewFeedManager(path string, w *WebSocketManager) *FeedManager {
