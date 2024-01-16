@@ -11,12 +11,16 @@ import (
 
 var pnL = yblog.NewYBLogger("push", []string{"DEBUG", "DEBUG_NOTIFICATIONS"})
 
+// sendPushNotification notifies all subscribed browser that an item has been
+// added
 func (f *Feed) sendPushNotification() error {
-	// Send push notifications
+	// Check that notification settings are present
 	if f.NotificationSettings == nil {
 		pnL.Logger.Debug("Feed has no notifications settings")
 		return nil
 	}
+
+	// For each subscription we send the notification
 	for _, subscription := range f.Config.Subscriptions {
 		pnL.Logger.Debug("Sending push notification", slog.String("endpoint", subscription.Endpoint))
 		resp, _ := webpush.SendNotification([]byte(fmt.Sprintf("New item posted to feed %s", f.Name())), &subscription, &webpush.Options{

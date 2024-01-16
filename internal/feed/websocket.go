@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/gorilla/websocket"
 	ws "github.com/gorilla/websocket"
 	"github.com/ybizeul/ybfeed/internal/utils"
 	"github.com/ybizeul/ybfeed/pkg/yblog"
@@ -15,16 +14,17 @@ import (
 
 var wsL = yblog.NewYBLogger("push", []string{"DEBUG", "DEBUG_WEBSOCKET"})
 
+// upgrader is used to upgrade a connection to a websocket
+var upgrader = ws.Upgrader{} // use default options
+
+// FeedSockets maintains a list of active websockets for a specific feed
+// designated by feedName
 type FeedSockets struct {
 	feedName   string
 	websockets []*ws.Conn
 }
 
-type FeedNotification struct {
-	Action string         `json:"action"`
-	Item   PublicFeedItem `json:"item"`
-}
-
+// RemoveConn removes the websocket c from the list of active websockets
 func (fs *FeedSockets) RemoveConn(c *ws.Conn) {
 	wsL.Logger.Debug("Removing connection",
 		slog.Int("count", len(fs.websockets)),
@@ -40,22 +40,32 @@ func (fs *FeedSockets) RemoveConn(c *ws.Conn) {
 	}
 }
 
+// FeedNotification is used to marshall notification information message
+// to the push service
+type FeedNotification struct {
+	Action string         `json:"action"`
+	Item   PublicFeedItem `json:"item"`
+}
+
+// WebSocketManager bridges a FeedManager with a FeedSockets struct
 type WebSocketManager struct {
 	FeedSockets []*FeedSockets
 	FeedManager *FeedManager
 }
 
+// NewWebSocketManager creates a new WebSocketManager. There is typically one
+// WebSocketManager per ybFeed deployment.
 func NewWebSocketManager(fm *FeedManager) *WebSocketManager {
 	return &WebSocketManager{
 		FeedManager: fm,
 	}
 }
 
-var upgrader = websocket.Upgrader{} // use default options
-
+// FeedSocketsForFeed returns the FeedSockets for feed feedName
 func (m *WebSocketManager) FeedSocketsForFeed(feedName string) *FeedSockets {
 	wsL.Logger.Debug("Searching FeedSockets", slog.Int("count", len(m.FeedSockets)), slog.String("feedName", feedName))
 
+	// Loop through all FeedSockets to find the one for this feed
 	for _, fs := range m.FeedSockets {
 		if fs.feedName == feedName {
 			return fs
@@ -64,12 +74,14 @@ func (m *WebSocketManager) FeedSocketsForFeed(feedName string) *FeedSockets {
 	return nil
 }
 
+// RunSocketForFeed promotes an HTTP connection to a websocket and starts
+// waiting for data. This function is blocking and typically runs from
+// a http handler.
 func (m *WebSocketManager) RunSocketForFeed(feedName string, w http.ResponseWriter, r *http.Request) {
-	c, err := upgrader.Upgrade(w, r, nil)
-
+	// Check if we already have websockets for this feed
 	feedSockets := m.FeedSocketsForFeed(feedName)
 
-	if feedSockets == nil {
+	if feedSockets == nil { // No, then we create a new FeedSockets
 		wsL.Logger.Debug("Adding FeedSockets", slog.Int("count_before", len(m.FeedSockets)), slog.String("feedName", feedName))
 		feedSockets = &FeedSockets{
 			feedName: feedName,
@@ -77,16 +89,29 @@ func (m *WebSocketManager) RunSocketForFeed(feedName string, w http.ResponseWrit
 		m.FeedSockets = append(m.FeedSockets, feedSockets)
 	}
 
-	wsL.Logger.Debug("Adding connection", slog.Int("count", len(feedSockets.websockets)))
-	feedSockets.websockets = append(feedSockets.websockets, c)
-	wsL.Logger.Debug("Added connection", slog.Int("count", len(feedSockets.websockets)))
-
-	wsL.Logger.Debug("WebSocket added", slog.Int("array size", len(feedSockets.websockets)))
-
+	c, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		utils.CloseWithCodeAndMessage(w, 500, "Unable to upgrade WebSocket")
 	}
+
+	feedSockets.websockets = append(feedSockets.websockets, c)
+
 	secret, _ := utils.GetSecret(r)
+
+	f, err := m.FeedManager.GetFeedWithAuth(feedName, secret)
+
+	if err != nil {
+		switch {
+		case errors.Is(err, FeedErrorNotFound):
+			utils.CloseWithCodeAndMessage(w, 404, "feed not found")
+		case errors.Is(err, FeedErrorInvalidSecret):
+			utils.CloseWithCodeAndMessage(w, 401, "invalid secret")
+		case errors.Is(err, FeedErrorIncorrectSecret):
+			utils.CloseWithCodeAndMessage(w, 401, "incorrect secret")
+		default:
+			utils.CloseWithCodeAndMessage(w, 500, err.Error())
+		}
+	}
 
 	defer func() {
 		feedSockets.RemoveConn(c)
@@ -102,15 +127,6 @@ func (m *WebSocketManager) RunSocketForFeed(feedName string, w http.ResponseWrit
 		}
 		switch strings.TrimSpace(string(message)) {
 		case "feed":
-			f, err := m.FeedManager.GetFeed(feedName)
-			if ferr := f.IsSecretValid(secret); err != nil {
-				if errors.Is(ferr, FeedErrorInvalidSecret) {
-					utils.CloseWithCodeAndMessage(w, 401, "invalid secret")
-				}
-			}
-			if err != nil {
-				utils.CloseWithCodeAndMessage(w, 500, err.Error())
-			}
 			pf, err := f.Public()
 			if err != nil {
 				utils.CloseWithCodeAndMessage(w, 500, err.Error())
