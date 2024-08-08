@@ -276,8 +276,11 @@ func (feed *Feed) GetItemData(item string) ([]byte, error) {
 	var content []byte
 
 	// Get path to feed item
-	filePath := path.Join(feed.Path, item)
+	filePath := path.Join(feed.Path, path.Join("/"+item))
 
+	if path.Base(filePath) == "secret" || path.Base(filePath) == "pin" || path.Base(filePath) == "config.json" {
+		return nil, fmt.Errorf("%w: %s", FeedErrorItemNotFound, item)
+	}
 	// Read feed item content
 	content, err := os.ReadFile(filePath)
 	if err != nil {
@@ -315,7 +318,7 @@ func (feed *Feed) IsSecretValid(secret string) error {
 
 // AddItem reads content from r and creates a new file in the feed directory
 // with a name and file extension based on contentType, then notifies clients
-func (f *Feed) AddItem(contentType string, r io.ReadCloser) error {
+func (f *Feed) AddItem(contentType string, r io.Reader) error {
 	fL.Logger.Debug("Adding Item", slog.String("feed", f.Name()), slog.String("content-type", contentType))
 
 	var err error
@@ -385,10 +388,11 @@ func (f *Feed) AddItem(contentType string, r io.ReadCloser) error {
 	}
 
 	// Notify additon to all connected browsers
-	if err = f.WebSocketManager.NotifyAdd(publicItem); err != nil {
-		return err
+	if f.WebSocketManager != nil {
+		if err = f.WebSocketManager.NotifyAdd(publicItem); err != nil {
+			return err
+		}
 	}
-
 	// Send push notification to subscribed browsers
 	err = f.sendPushNotification()
 	if err != nil {
