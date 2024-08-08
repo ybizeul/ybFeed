@@ -250,7 +250,7 @@ func (feed *Feed) GetPublicItem(i string) (*PublicFeedItem, error) {
 		return nil, FeedErrorInvalidFeedItem
 	}
 
-	s, err := os.Stat(path.Join(feed.Path, i))
+	s, err := os.Stat(path.Join(feed.Path, path.Join("/", i)))
 
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -276,8 +276,11 @@ func (feed *Feed) GetItemData(item string) ([]byte, error) {
 	var content []byte
 
 	// Get path to feed item
-	filePath := path.Join(feed.Path, item)
+	filePath := path.Join(feed.Path, path.Join("/"+item))
 
+	if path.Base(filePath) == "secret" || path.Base(filePath) == "pin" || path.Base(filePath) == "config.json" {
+		return nil, fmt.Errorf("%w: %s", FeedErrorItemNotFound, item)
+	}
 	// Read feed item content
 	content, err := os.ReadFile(filePath)
 	if err != nil {
@@ -315,7 +318,7 @@ func (feed *Feed) IsSecretValid(secret string) error {
 
 // AddItem reads content from r and creates a new file in the feed directory
 // with a name and file extension based on contentType, then notifies clients
-func (f *Feed) AddItem(contentType string, r io.ReadCloser) error {
+func (f *Feed) AddItem(contentType string, r io.Reader) error {
 	fL.Logger.Debug("Adding Item", slog.String("feed", f.Name()), slog.String("content-type", contentType))
 
 	var err error
@@ -385,10 +388,11 @@ func (f *Feed) AddItem(contentType string, r io.ReadCloser) error {
 	}
 
 	// Notify additon to all connected browsers
-	if err = f.WebSocketManager.NotifyAdd(publicItem); err != nil {
-		return err
+	if f.WebSocketManager != nil {
+		if err = f.WebSocketManager.NotifyAdd(publicItem); err != nil {
+			return err
+		}
 	}
-
 	// Send push notification to subscribed browsers
 	err = f.sendPushNotification()
 	if err != nil {
@@ -405,7 +409,7 @@ func (f *Feed) AddItem(contentType string, r io.ReadCloser) error {
 func (f *Feed) RemoveItem(item string) error {
 	fL.Logger.Debug("Remove Item", slog.String("name", item), slog.String("feed", f.Path))
 
-	itemPath := path.Join(f.Path, item)
+	itemPath := path.Join(f.Path, path.Join("/", item))
 
 	// Save public item before deletion for notification later
 	publicItem, err := f.GetPublicItem(item)
@@ -423,8 +427,10 @@ func (f *Feed) RemoveItem(item string) error {
 	}
 
 	// Notify all connected websockets
-	if err = f.WebSocketManager.NotifyRemove(publicItem); err != nil {
-		return err
+	if f.WebSocketManager != nil {
+		if err = f.WebSocketManager.NotifyRemove(publicItem); err != nil {
+			return err
+		}
 	}
 
 	fL.Logger.Debug("Removed Item", slog.String("name", item), slog.String("feed", f.Path))
