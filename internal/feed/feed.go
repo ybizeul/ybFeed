@@ -250,7 +250,7 @@ func (feed *Feed) GetPublicItem(i string) (*PublicFeedItem, error) {
 		return nil, FeedErrorInvalidFeedItem
 	}
 
-	s, err := os.Stat(path.Join(feed.Path, i))
+	s, err := os.Stat(path.Join(feed.Path, path.Join("/", i)))
 
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -409,7 +409,7 @@ func (f *Feed) AddItem(contentType string, r io.Reader) error {
 func (f *Feed) RemoveItem(item string) error {
 	fL.Logger.Debug("Remove Item", slog.String("name", item), slog.String("feed", f.Path))
 
-	itemPath := path.Join(f.Path, item)
+	itemPath := path.Join(f.Path, path.Join("/", item))
 
 	// Save public item before deletion for notification later
 	publicItem, err := f.GetPublicItem(item)
@@ -427,8 +427,10 @@ func (f *Feed) RemoveItem(item string) error {
 	}
 
 	// Notify all connected websockets
-	if err = f.WebSocketManager.NotifyRemove(publicItem); err != nil {
-		return err
+	if f.WebSocketManager != nil {
+		if err = f.WebSocketManager.NotifyRemove(publicItem); err != nil {
+			return err
+		}
 	}
 
 	fL.Logger.Debug("Removed Item", slog.String("name", item), slog.String("feed", f.Path))
