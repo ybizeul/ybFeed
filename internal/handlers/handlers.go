@@ -339,7 +339,7 @@ func (api *ApiHandler) feedPatchHandlerFunc(w http.ResponseWriter, r *http.Reque
 	}
 }
 func (api *ApiHandler) feedItemEmptyHandlerFunc(w http.ResponseWriter, r *http.Request) {
-	logger.Debug("Item API EMPTY request", slog.Any("request", r))
+	hL.Logger.Debug("Item API EMPTY request", slog.Any("request", r))
 
 	secret, _ := utils.GetSecret(r)
 
