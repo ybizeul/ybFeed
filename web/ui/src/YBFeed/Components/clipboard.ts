@@ -21,7 +21,7 @@ export const copyImageItem = (item:YBFeedItem) => {
             img.onload = imageLoaded
 
         })
-        img.src = "/api/feed/"+encodeURIComponent(item.feed.name)+"/"+item.name
+        img.src = "/api/feeds/"+encodeURIComponent(item.feed.name)+"/items/"+item.name
 
         const mime = 'image/png'
         navigator.clipboard.write([new ClipboardItem({[mime]:imageDataPromise})])

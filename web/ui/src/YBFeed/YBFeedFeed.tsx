@@ -6,7 +6,7 @@ import useWebSocket, {ReadyState} from 'react-use-websocket';
 
 import { notifications } from '@mantine/notifications';
 
-import { Menu, ActionIcon, PinInput, Text, Modal, Center, Group, rem} from '@mantine/core';
+import { Menu, ActionIcon, PinInput, Text, Modal, Center, Group, rem, Button} from '@mantine/core';
 
 import { YBFeed, YBFeedConnector, YBFeedItem } from '.'
 
@@ -136,6 +136,9 @@ export function YBFeedFeed() {
         })
     }
 
+    const deleteAll = () => {
+        connection.EmptyFeed(feedParam)
+    }
     return (
         <>
         {goTo?
@@ -143,6 +146,7 @@ export function YBFeedFeed() {
         :""}
         {authenticated===true?
             <Group gap="xs" justify="flex-end" style={{float: 'right'}}>
+                <Button size="xs" variant="outline" color="red" onClick={deleteAll}>Delete Content</Button>
             {vapid?
             <YBNotificationToggleComponent vapid={vapid} feedName={feedParam}/>
             :""}

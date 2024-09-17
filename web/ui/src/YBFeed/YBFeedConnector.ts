@@ -2,7 +2,7 @@ import { YBFeed, YBFeedItem, YBFeedError } from '.'
 
 export class YBFeedConnector {
     feedUrl(feedName: string): string {
-        return "/api/feed/"+encodeURIComponent(feedName)
+        return "/api/feeds/"+encodeURIComponent(feedName)
     }
     async Ping(): Promise<Headers> {
         return new Promise((resolve, reject) => {
@@ -68,7 +68,7 @@ export class YBFeedConnector {
     }
     async GetItem(item: YBFeedItem): Promise<string> {
         return new Promise((resolve, reject) => {
-            fetch(this.feedUrl(item.feed.name)+"/"+item.name,{
+            fetch(this.feedUrl(item.feed.name)+"/items/"+item.name,{
                 credentials: "include"
             })
             .then(r => {
@@ -87,7 +87,7 @@ export class YBFeedConnector {
     }
     async DeleteItem(item: YBFeedItem) {
         return new Promise((resolve, reject) => {
-            fetch(this.feedUrl(item.feed.name)+"/"+encodeURIComponent(item.name),{
+            fetch(this.feedUrl(item.feed.name)+"/items/"+encodeURIComponent(item.name),{
                 method: "DELETE",
                 credentials: "include"
             })
@@ -106,6 +106,29 @@ export class YBFeedConnector {
             })
         })
     }
+    async EmptyFeed(feedName: string): Promise<boolean> {
+        return new Promise((resolve, reject) => {
+            fetch(this.feedUrl(feedName)+
+                "/items",{
+                method: "DELETE",
+                credentials: "include"
+            })
+            .then((f) => {
+                if (f.status !== 200) {
+                    f.text()
+                    .then(text => {
+                        reject(new YBFeedError(f.status, text))
+                    })
+                    .catch(() => {
+                        reject(new YBFeedError(f.status, "Server Unavailable"))
+                    })
+                } else {
+                    resolve(true)
+                }
+            })
+        })
+    }
+
     async SetPIN(feedName: string, pin: string): Promise<boolean> {
         return new Promise((resolve, reject) => {
             fetch(this.feedUrl(feedName),{

@@ -8,7 +8,7 @@ export function YBFeedItemImageComponent() {
 
     return(
         <Card.Section mt="sm">
-            <Image src={"/api/feed/"+encodeURIComponent(item!.feed.name)+"/"+item!.name} />
+            <Image src={"/api/feeds/"+encodeURIComponent(item!.feed.name)+"/items/"+item!.name} />
         </Card.Section>
     )
 }

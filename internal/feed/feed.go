@@ -244,6 +244,20 @@ func (feed *Feed) publicItems() ([]PublicFeedItem, error) {
 	return items, nil
 }
 
+func (feed *Feed) Empty() error {
+	items, err := feed.publicItems()
+	if err != nil {
+		return err
+	}
+	for _, item := range items {
+		err := feed.RemoveItem(item.Name)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // GetPublicItem returns a marshable struct for a specific feed item
 func (feed *Feed) GetPublicItem(i string) (*PublicFeedItem, error) {
 	if i == "secret" || i == "pin" || i == "config.json" {

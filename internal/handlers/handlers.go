@@ -193,16 +193,15 @@ func (api *ApiHandler) GetServer() *chi.Mux {
 		}
 	})
 
-	r.Route("/api/feed", func(r chi.Router) {
+	r.Route("/api/feeds", func(r chi.Router) {
 		r.Get("/{feedName}", api.feedHandlerFunc)
 		r.Post("/{feedName}", api.feedPostHandlerFunc)
 		r.Patch("/{feedName}", api.feedPatchHandlerFunc)
-
-		r.Get("/{feedName}/{itemName}", api.feedItemHandlerFunc)
-		r.Delete("/{feedName}/{itemName}", api.feedItemDeleteHandlerFunc)
-
 		r.Post("/{feedName}/subscription", api.feedSubscriptionHandlerFunc)
 		r.Delete("/{feedName}/subscription", api.feedUnsubscribeHandlerFunc)
+		r.Delete("/{feedName}/items", api.feedItemEmptyHandlerFunc)
+		r.Get("/{feedName}/items/{itemName}", api.feedItemHandlerFunc)
+		r.Delete("/{feedName}/items/{itemName}", api.feedItemDeleteHandlerFunc)
 	})
 	r.Get("/*", RootHandlerFunc)
 
@@ -291,7 +290,7 @@ func (api *ApiHandler) feedHandlerFunc(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:    "Secret",
 		Value:   publicFeed.Secret,
-		Path:    fmt.Sprintf("/api/feed/%s", feedName),
+		Path:    fmt.Sprintf("/api/feeds/%s", feedName),
 		Expires: time.Now().Add(time.Hour * 24 * 365 * 10),
 	})
 
@@ -342,6 +341,35 @@ func (api *ApiHandler) feedPatchHandlerFunc(w http.ResponseWriter, r *http.Reque
 			utils.CloseWithCodeAndMessage(w, 400, "PIN should be 4 digits")
 		}
 		utils.CloseWithCodeAndMessage(w, 500, err.Error())
+		return
+	}
+}
+func (api *ApiHandler) feedItemEmptyHandlerFunc(w http.ResponseWriter, r *http.Request) {
+	logger.Debug("Item API EMPTY request", slog.Any("request", r))
+
+	secret, _ := utils.GetSecret(r)
+
+	feedName, _ := url.QueryUnescape(chi.URLParam(r, "feedName"))
+	if feedName == "" {
+		utils.CloseWithCodeAndMessage(w, 500, "Unable to obtain feed name")
+	}
+
+	f, err := api.FeedManager.GetFeedWithAuth(feedName, secret)
+	if err != nil {
+		switch {
+		case errors.Is(err, feed.FeedErrorNotFound):
+			utils.CloseWithCodeAndMessage(w, 404, fmt.Sprintf("feed '%s' not found", feedName))
+		case errors.Is(err, feed.FeedErrorInvalidSecret):
+			utils.CloseWithCodeAndMessage(w, 401, "Unauthorized")
+		default:
+			utils.CloseWithCodeAndMessage(w, 500, fmt.Sprintf("Error while getting feed: %s", err.Error()))
+		}
+		return
+	}
+
+	err = f.Empty()
+	if err != nil {
+		utils.CloseWithCodeAndMessage(w, 500, fmt.Sprintf("Error while getting feed: %s", err.Error()))
 		return
 	}
 }
