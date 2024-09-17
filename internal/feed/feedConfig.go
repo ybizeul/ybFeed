@@ -93,13 +93,17 @@ func FeedConfigForFeed(f *Feed) (*FeedConfig, error) {
 }
 
 func (config *FeedConfig) Write() error {
-	b, err := json.Marshal(config)
+	configPath := path.Join(config.feed.Path, "config.json")
+
+	f, err := os.Create(configPath)
 	if err != nil {
-		return err
+		return fmt.Errorf("%w: %s", FeedConfigErrorCantWrite, configPath)
 	}
 
-	configPath := path.Join(config.feed.Path, "config.json")
-	err = os.WriteFile(configPath, b, 0600)
+	e := json.NewEncoder(f)
+	e.SetIndent("", "  ")
+	err = e.Encode(config)
+
 	if err != nil {
 		return fmt.Errorf("%w: %s", FeedConfigErrorCantWrite, configPath)
 	}
