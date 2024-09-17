@@ -4,7 +4,7 @@ export function YBFeedItemTextComponent(props: any) {
     return(
         <div className="itemContainer">
             <div className="itemText">
-                <pre style={{overflowY:"scroll"}}>{props.children}</pre>
+                <pre style={{overflowY:"scroll", fontSize: "0.8em"}}>{props.children}</pre>
             </div>
         </div>
     )
