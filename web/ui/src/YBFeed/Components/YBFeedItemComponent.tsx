@@ -5,16 +5,16 @@ import { notifications } from '@mantine/notifications';
 import { IconPhoto, IconTrash, IconTxt, IconClipboardCopy } from "@tabler/icons-react"
 
 import { YBFeedItemTextComponent, YBFeedItemImageComponent, copyImageItem, FeedItemContext } from '.'
-import { YBFeedConnector, YBFeedError, YBFeedItem } from '../'
+import { YBFeedConnector, YBFeedItem } from '../'
 
 import { defaultNotificationProps } from '../config';
 
-const connection = new YBFeedConnector()
+//const connection = new YBFeedConnector()
 
 // This is the heading component of a single item.
 // Its how the item type, name and the Copy and Delete buttons
 export interface FeedItemHeadingComponentProps {
-    onDelete?: () => void,
+    onDelete?: (item: YBFeedItem) => void,
     clipboardContent?: string,
 }
 
@@ -34,21 +34,6 @@ function YBHeadingComponent(props: FeedItemHeadingComponentProps) {
     // Display delete item confirmation dialog
     function deleteItem() {
         setDeleteModalOpen(true)
-    }
-
-    // Do the actual item deletion callback
-    function doDeleteItem() {
-        connection.DeleteItem(item!)
-        .then(() => {
-            setDeleteModalOpen(false)
-            if (props.onDelete) {
-                props.onDelete()
-            }
-        })
-        .catch((e: YBFeedError) => {
-            notifications.show({message: e.message, color: "red"})
-            setDeleteModalOpen(false)
-        })
     }
 
     // Copy item to pasteboard
@@ -78,12 +63,12 @@ function YBHeadingComponent(props: FeedItemHeadingComponentProps) {
                     <Text>Do you really want to delete item "{name}"?</Text>
                     <Center mt="1em">
                         <Group align='right'>
-                            <Button size="xs" color="red" onClick={doDeleteItem}>Delete</Button>
+                            <Button size="xs" color="red" onClick={() => props.onDelete&&props.onDelete(item!)}>Delete</Button>
                             <Button size="xs" onClick={() => setDeleteModalOpen(false)}>Cancel</Button>
                         </Group>
                     </Center>
                 </Modal>
-                <Group ml="1em" mr="1em" justify="space-between">
+                <Group ml="1em" mr="1em"  mt="sm" justify="space-between">
                     <Group>
                         {(type === undefined)?
                         <Skeleton width={20} height={20} />
@@ -121,18 +106,18 @@ function YBHeadingComponent(props: FeedItemHeadingComponentProps) {
 export interface YBFeedItemComponentProps {
     showCopyButton?: boolean
     onUpdate?: (item: YBFeedItem) => void
-    onDelete?: () => void
+    onDelete?: (item: YBFeedItem) => void
 }
 
 export function YBFeedItemComponent(props: YBFeedItemComponentProps) {
     const item = useContext(FeedItemContext)
 
     const [textContent,setTextContent] = useState<string|undefined>(undefined)
-    const [timedOut, setTimedOut] = useState(false)
+    // const [timedOut, setTimedOut] = useState(false)
 
-    useEffect(()=> {
-        window.setTimeout(() => setTimedOut(true),1000)
-    })
+    // useEffect(()=> {
+    //     window.setTimeout(() => setTimedOut(true),1000)
+    // })
     
     useEffect(() => {
         if (item && item!.type === 0) {
@@ -144,17 +129,16 @@ export function YBFeedItemComponent(props: YBFeedItemComponentProps) {
         }
     })
 
+    if (! item) {
+        return(
+        <Card mt="2em" withBorder shadow="sm" radius="md" mb="2em">
+            <YBHeadingComponent onDelete={props.onDelete} clipboardContent={textContent}/>
+            <Skeleton mt="2em" height={50}/>
+        </Card>
+        )
+    }
+    
     return(
-        <>
-        {!item?
-            timedOut?
-            <Card mt="2em" withBorder shadow="sm" radius="md" mb="2em">
-                <YBHeadingComponent onDelete={props.onDelete} clipboardContent={textContent}/>
-                <Skeleton mt="2em" height={50}/>
-            </Card>
-            :
-            ""
-        :
         <Card withBorder shadow="sm" radius="md" mb="2em">
             <YBHeadingComponent onDelete={props.onDelete} clipboardContent={textContent}/>
             {(item.type===0)?
@@ -164,7 +148,6 @@ export function YBFeedItemComponent(props: YBFeedItemComponentProps) {
             :
             <YBFeedItemImageComponent/>
             }
-        </Card>}
-        </>
+        </Card>
     )
 }

@@ -488,7 +488,7 @@ func (api *ApiHandler) feedItemDeleteHandlerFunc(w http.ResponseWriter, r *http.
 		utils.CloseWithCodeAndMessage(w, 500, "Unable to obtain feed item")
 	}
 
-	err = f.RemoveItem(feedItem)
+	err = f.RemoveItem(feedItem, true)
 	if err != nil {
 		switch {
 		case errors.Is(err, feed.FeedErrorItemNotFound):

@@ -70,7 +70,7 @@ func TestPathTraversalDelete(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = f.RemoveItem("../feed1/config.json")
+	err = f.RemoveItem("../feed1/config.json", true)
 
 	if err == nil {
 		t.Fatal("Path traversal not blocked")

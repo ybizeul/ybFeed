@@ -1,12 +1,10 @@
-import { useEffect, useState, useMemo } from "react"
+import { useEffect, useState, useMemo, useRef } from "react"
 
 import { useParams, useSearchParams, Navigate } from 'react-router-dom';
 
-import useWebSocket, {ReadyState} from 'react-use-websocket';
-
 import { notifications } from '@mantine/notifications';
 
-import { Menu, ActionIcon, PinInput, Text, Modal, Center, Group, rem, Button} from '@mantine/core';
+import { Menu, ActionIcon, PinInput, Text, Modal, Center, Group, rem, Button, Box} from '@mantine/core';
 
 import { YBFeed, YBFeedConnector, YBFeedItem } from '.'
 
@@ -33,8 +31,63 @@ export function YBFeedFeed() {
 
     const connection = useMemo(() => new YBFeedConnector(),[])
 
+    const ws = useRef<WebSocket|null>(null)
 
-    const { sendMessage, lastJsonMessage, readyState } = useWebSocket(window.location.protocol.replace("http","ws") + "//" + window.location.host + "/ws/" + feedParam,{queryParams:{"secret":secret},retryOnError: true}, secret != "");
+    useEffect(() => {
+        if (!secret) {
+            return
+        }
+        ws.current = new WebSocket(window.location.protocol.replace("http","ws") + "//" + window.location.host + "/ws/" + feedParam + "?secret=" + secret)
+        if (ws.current === null) {
+            return
+        }
+        ws.current.onopen = () => {
+            ws.current?.send("feed")
+        }
+
+        ws.current.onmessage = (m:WebSocketEventMap["message"]) => {
+            const message_data = JSON.parse(m.data)
+            if (message_data) {
+                if (Object.prototype.hasOwnProperty.call(message_data, "items")) {
+                    const f = (message_data as YBFeed)
+                    if (f.items) {
+                        setFeedItems(f.items)
+                        setAuthenticated(true)
+                    }
+                    if (f.secret) {
+                        setSecret(f.secret)
+                    }
+                }
+                if (Object.prototype.hasOwnProperty.call(message_data, "action")) {
+                    interface ActionMessage {
+                        action: string,
+                        item: YBFeedItem
+                    }
+                    const am = (message_data as ActionMessage)
+                    if (am.action === "remove") {
+                        setFeedItems((items) => items.filter((i) => i.name !== am.item.name))
+                    } else if (am.action === "add") {
+                        setFeedItems((items) => [am.item].concat(items))
+                    } else if (am.action === "empty") {
+                        setFeedItems([])
+                    }
+                }
+            }
+        }
+        return () => {
+            ws.current?.close()
+        }
+    },[secret])
+
+    // const { sendMessage, readyState } = useMemo(() => useWebSocket(
+    //     window.location.protocol.replace("http","ws") + "//" + window.location.host + "/ws/" + feedParam,
+    //     {queryParams:{"secret":secret},retryOnError: true, onMessage: handleMessage}, secret != ""),[]);
+
+    // Do the actual item deletion callback
+    const deleteItem = (item: YBFeedItem) => {
+        setFeedItems((items) => items.filter((i) => i.name !== item.name))
+        connection.DeleteItem(item!)
+    }
 
     // If secret is sent as part of the URL params, set secret state and
     // redirect to the URL omitting the secret
@@ -73,35 +126,15 @@ export function YBFeedFeed() {
         }
     },[secret,connection,feedParam])
 
-    useEffect(() => {
-        if (readyState === ReadyState.OPEN) {
-            setFatal(false)
-            sendMessage("feed")
-        }
-        else if (readyState === ReadyState.CLOSED){
-            setFatal(true)
-        }
-    },[readyState,sendMessage])
-
-    // Handles messages received by websocket
-    useEffect(() => {
-        if (lastJsonMessage) {
-            if (Object.prototype.hasOwnProperty.call(lastJsonMessage, "items")) {
-                const f = (lastJsonMessage as YBFeed)
-                if (f.items) {
-                    setFeedItems(f.items)
-                    setAuthenticated(true)
-                }
-                if (f.secret) {
-                    setSecret(f.secret)
-                }
-            }
-            if (Object.prototype.hasOwnProperty.call(lastJsonMessage, "action")) {
-                sendMessage("feed")
-            }
-        }
-
-    },[lastJsonMessage,sendMessage])
+    // useEffect(() => {
+    //     if (readyState === ReadyState.OPEN) {
+    //         setFatal(false)
+    //         sendMessage("feed")
+    //     }
+    //     else if (readyState === ReadyState.CLOSED){
+    //         setFatal(true)
+    //     }
+    // },[readyState,sendMessage])
 
     //
     // Creating links to feed
@@ -139,32 +172,34 @@ export function YBFeedFeed() {
     const deleteAll = () => {
         connection.EmptyFeed(feedParam)
     }
+
+
     return (
-        <>
+        <Box>
         {goTo?
         <Navigate to={goTo} />
         :""}
         {authenticated===true?
             <Group gap="xs" justify="flex-end" style={{float: 'right'}}>
                 <Button size="xs" variant="outline" color="red" onClick={deleteAll}>Delete Content</Button>
-            {vapid?
-            <YBNotificationToggleComponent vapid={vapid} feedName={feedParam}/>
-            :""}
-            <Menu trigger="hover" position="bottom-end" withArrow arrowPosition="center">
-                <Menu.Target>
-                    <ActionIcon size="md" variant="outline" aria-label="Menu" onClick={copyLink}>
-                        <IconLink style={{ width: '70%', height: '70%' }} stroke={1.5} />
-                    </ActionIcon>
-                </Menu.Target>
-                <Menu.Dropdown>
-                <Menu.Item leftSection={<IconLink style={{ width: rem(14), height: rem(14) }} />} onClick={copyLink}>
-                    Copy Permalink
-                </Menu.Item>
-                <Menu.Item leftSection={<IconHash style={{ width: rem(14), height: rem(14) }} />} onClick={() => setPinModalOpen(true)}>
-                    Set Temporary PIN
-                </Menu.Item>
-                </Menu.Dropdown>
-            </Menu>
+                {vapid?
+                <YBNotificationToggleComponent vapid={vapid} feedName={feedParam}/>
+                :""}
+                <Menu trigger="hover" position="bottom-end" withArrow arrowPosition="center">
+                    <Menu.Target>
+                        <ActionIcon size="md" variant="outline" aria-label="Menu" onClick={copyLink}>
+                            <IconLink style={{ width: '70%', height: '70%' }} stroke={1.5} />
+                        </ActionIcon>
+                    </Menu.Target>
+                    <Menu.Dropdown>
+                    <Menu.Item leftSection={<IconLink style={{ width: rem(14), height: rem(14) }} />} onClick={copyLink}>
+                        Copy Permalink
+                    </Menu.Item>
+                    <Menu.Item leftSection={<IconHash style={{ width: rem(14), height: rem(14) }} />} onClick={() => setPinModalOpen(true)}>
+                        Set Temporary PIN
+                    </Menu.Item>
+                    </Menu.Dropdown>
+                </Menu>
             </Group>
         :""}
 
@@ -185,7 +220,7 @@ export function YBFeedFeed() {
 
             <YBPasteCardComponent empty={feedItems.length === 0}/>
 
-            <YBFeedItemsComponent items={feedItems}/>
+            <YBFeedItemsComponent items={feedItems} onDelete={deleteItem}/>
             </>
             :""}
 
@@ -202,6 +237,6 @@ export function YBFeedFeed() {
             <Center>{fatal}</Center>
         
         }
-        </>
+       </Box>
     )
 }

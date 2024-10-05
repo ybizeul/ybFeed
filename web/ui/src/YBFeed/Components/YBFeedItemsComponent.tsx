@@ -8,7 +8,7 @@ export const FeedItemContext = createContext<undefined|YBFeedItem>(undefined);
 export interface YBFeedItemsComponentProps {
     items: YBFeedItem[],
     onUpdate?: (item: YBFeedItem) => void
-    onDelete?: () => void
+    onDelete?: (item: YBFeedItem) => void
 }
 
 export function YBFeedItemsComponent(props: YBFeedItemsComponentProps) {

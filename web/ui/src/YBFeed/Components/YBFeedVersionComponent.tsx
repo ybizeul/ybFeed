@@ -6,13 +6,19 @@ export function YBFeedVersionComponent() {
         useEffect(() => {
             fetch("/api")
             .then(r => {
+                console.log(r)
                 const v = r.headers.get("Ybfeed-Version")
-                if (v !== null) {
+                console.log(v)
+                if (v !== null && v !== "") {
                     setVersion(v)
+                } else {
+                    setVersion("Unknown")
                 }
             })
-        })
-        //const pinned = useHeadroom({ fixedAt: 120 });
+            .catch(e => {
+                console.log(e)
+            })
+        },[])
         return (
             <>
             {!version?

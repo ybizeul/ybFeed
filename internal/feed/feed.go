@@ -250,11 +250,19 @@ func (feed *Feed) Empty() error {
 		return err
 	}
 	for _, item := range items {
-		err := feed.RemoveItem(item.Name)
+		err := feed.RemoveItem(item.Name, false)
 		if err != nil {
 			return err
 		}
 	}
+
+	// Notify all connected websockets
+	if feed.WebSocketManager != nil {
+		if err = feed.WebSocketManager.NotifyEmpty(feed); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -420,7 +428,7 @@ func (f *Feed) AddItem(contentType string, r io.Reader) error {
 }
 
 // RemoveItem deletes item from the feed directory and notifies clients
-func (f *Feed) RemoveItem(item string) error {
+func (f *Feed) RemoveItem(item string, notify bool) error {
 	fL.Logger.Debug("Remove Item", slog.String("name", item), slog.String("feed", f.Path))
 
 	itemPath := path.Join(f.Path, path.Join("/", item))
@@ -441,7 +449,7 @@ func (f *Feed) RemoveItem(item string) error {
 	}
 
 	// Notify all connected websockets
-	if f.WebSocketManager != nil {
+	if f.WebSocketManager != nil && notify {
 		if err = f.WebSocketManager.NotifyRemove(publicItem); err != nil {
 			return err
 		}

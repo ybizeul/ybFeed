@@ -20,10 +20,9 @@ const router = createBrowserRouter([
     },
 ])
 
-
 export function YBFeedApp() {
     return (
-        <AppShell withBorder={false} >
+        <AppShell withBorder={false}>
             <AppShell.Main>
                 <Container size="md" mx="auto">
                     <RouterProvider router={router} />
