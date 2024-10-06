@@ -1,14 +1,14 @@
 import { useEffect, useState, useMemo, useRef } from "react"
 
-import { useParams, useSearchParams, Navigate, redirect } from 'react-router-dom';
+import { useParams, useSearchParams, redirect } from 'react-router-dom';
 
 import { notifications } from '@mantine/notifications';
 
-import { Menu, ActionIcon, PinInput, Text, Modal, Center, Group, rem, Button, Box} from '@mantine/core';
+import { Menu, ActionIcon, Center, Group, rem, Button, Box} from '@mantine/core';
 
 import { YBFeed, YBFeedConnector, YBFeedItem } from '.'
 
-import { YBBreadCrumbComponent, YBPasteCardComponent, YBFeedItemsComponent, YBNotificationToggleComponent, YBFeedItemComponent } from './Components'
+import { YBBreadCrumbComponent, YBPasteCardComponent, YBFeedItemsComponent, YBNotificationToggleComponent } from './Components'
 import { defaultNotificationProps } from './config';
 
 import {

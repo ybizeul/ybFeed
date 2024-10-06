@@ -2,9 +2,7 @@ import { AppShell, Container } from "@mantine/core"
 
 import {
     BrowserRouter,
-    createBrowserRouter,
     Route,
-    RouterProvider,
     Routes,
   } from "react-router-dom";
 

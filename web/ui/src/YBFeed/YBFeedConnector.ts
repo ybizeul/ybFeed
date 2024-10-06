@@ -1,4 +1,4 @@
-import { AxiosResponse, AxiosResponseHeaders } from 'axios'
+import { AxiosResponseHeaders } from 'axios'
 import { YBFeed, YBFeedItem, YBFeedError } from '.'
 import { Y } from '../YBFeedClient'
 
@@ -229,7 +229,7 @@ export class YBFeedConnector {
     async AddSubscription(feedName: string, subscription: any): Promise<boolean> {
         return new Promise((resolve, reject) => {
             Y.post('/feeds/' + encodeURIComponent(feedName) + "/subscription", subscription)
-            .then((f) => {
+            .then(() => {
                 resolve(true)
             })
             .catch((error) => {

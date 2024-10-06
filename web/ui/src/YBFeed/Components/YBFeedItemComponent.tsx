@@ -8,7 +8,6 @@ import { YBFeedItemTextComponent, YBFeedItemImageComponent, copyImageItem, FeedI
 import { YBFeedConnector, YBFeedItem } from '../'
 
 import { defaultNotificationProps } from '../config';
-import { YBFeedItemBinaryComponent } from './YBFeedItemBinaryComponent';
 
 //const connection = new YBFeedConnector()
 
