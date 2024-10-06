@@ -17,7 +17,7 @@ func TestGetFeedItemData(t *testing.T) {
 
 	reader := bytes.NewReader([]byte("test"))
 
-	err = f.AddItem("text/plain", reader)
+	err = f.AddItem("text/plain", "", reader)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -110,7 +110,7 @@ func TestPublicItem(t *testing.T) {
 
 	reader := bytes.NewReader([]byte("test"))
 
-	err = f.AddItem("text/plain", reader)
+	err = f.AddItem("text/plain", "", reader)
 	if err != nil {
 		t.Fatal(err)
 	}

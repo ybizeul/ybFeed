@@ -340,7 +340,7 @@ func (feed *Feed) IsSecretValid(secret string) error {
 
 // AddItem reads content from r and creates a new file in the feed directory
 // with a name and file extension based on contentType, then notifies clients
-func (f *Feed) AddItem(contentType string, r io.Reader) error {
+func (f *Feed) AddItem(contentType string, filename string, r io.Reader) error {
 	fL.Logger.Debug("Adding Item", slog.String("feed", f.Name()), slog.String("content-type", contentType))
 
 	var err error
@@ -355,7 +355,11 @@ func (f *Feed) AddItem(contentType string, r io.Reader) error {
 	// If the content-type isn't found, return an error
 	info, ok := mimeInfos[contentType]
 	if !ok {
-		return fmt.Errorf("%w: %s", FeedErrorInvalidContentType, contentType)
+		info = FileTypeInfo{
+			FileExtension:    path.Ext(filename)[1:],
+			FileNameTemplate: filename[:len(filename)-len(path.Ext(filename))],
+		}
+		//return fmt.Errorf("%w: %s", FeedErrorInvalidContentType, contentType)
 	}
 
 	// Obtain file extension and template for file name
@@ -379,10 +383,13 @@ func (f *Feed) AddItem(contentType string, r io.Reader) error {
 
 	// Search for existing content with identical file type to increment
 	// the index in file name
-	fileIndex := 1
-	var filename string
+	fileIndex := 0
 	for {
-		filename = fmt.Sprintf("%s %d", template, fileIndex)
+		fileIndexStr := ""
+		if fileIndex > 0 {
+			fileIndexStr = fmt.Sprintf(" %d", fileIndex)
+		}
+		filename = fmt.Sprintf("%s%s", template, fileIndexStr)
 		matches, err := filepath.Glob(path.Join(f.Path, filename) + ".*")
 		if err != nil {
 			return fmt.Errorf("%w: %s", FeedErrorErrorReading, filename)

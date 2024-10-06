@@ -1,13 +1,14 @@
 import { useState, useEffect, useContext } from 'react'
 
-import { Group, Modal, Button, Text, Center, Card, Skeleton } from "@mantine/core"
+import { Group, Modal, Button, Text, Center, Card, Skeleton, Space } from "@mantine/core"
 import { notifications } from '@mantine/notifications';
-import { IconPhoto, IconTrash, IconTxt, IconClipboardCopy } from "@tabler/icons-react"
+import { IconPhoto, IconTrash, IconTxt, IconClipboardCopy, IconFile, IconDownload } from "@tabler/icons-react"
 
 import { YBFeedItemTextComponent, YBFeedItemImageComponent, copyImageItem, FeedItemContext } from '.'
 import { YBFeedConnector, YBFeedItem } from '../'
 
 import { defaultNotificationProps } from '../config';
+import { YBFeedItemBinaryComponent } from './YBFeedItemBinaryComponent';
 
 //const connection = new YBFeedConnector()
 
@@ -73,12 +74,15 @@ function YBHeadingComponent(props: FeedItemHeadingComponentProps) {
                         {(type === undefined)?
                         <Skeleton width={20} height={20} />
                         :""}
-                        {(type === 0)?
+                        {(type === 0)&&
                         <IconTxt />
-                        :""}
-                        {(type === 1)?
+                        }
+                        {(type === 1)&&
                         <IconPhoto />
-                        :""}
+                        }
+                        {(type === 2)&&
+                        <IconFile />
+                        }
                         &nbsp;{name}
                     </Group>
                     <Group>
@@ -89,9 +93,15 @@ function YBHeadingComponent(props: FeedItemHeadingComponentProps) {
                         </>
                         :
                         <>
+                        {(type === 2)?
+                        <Button component="a" href={"/api/feeds/"+encodeURIComponent(item.feed.name)+"/items/"+item.name} size="xs" leftSection={<IconDownload size={14} />} variant="default" >
+                        Download
+                        </Button>
+                        :
                         <Button onClick={doCopyItem} size="xs" leftSection={<IconClipboardCopy size={14} />} variant="default" >
                             Copy
                         </Button>
+        }
                         <Button onClick={deleteItem} size="xs" leftSection={<IconTrash size={14} />} variant="light" color="red">
                             Delete
                         </Button>
@@ -141,12 +151,16 @@ export function YBFeedItemComponent(props: YBFeedItemComponentProps) {
     return(
         <Card withBorder shadow="sm" radius="md" mb="2em">
             <YBHeadingComponent onDelete={props.onDelete} clipboardContent={textContent}/>
-            {(item.type===0)?
+            {(item.type===0)&&
             <YBFeedItemTextComponent>
                 {textContent}
             </YBFeedItemTextComponent>
-            :
+            }
+            {(item.type===1)&&
             <YBFeedItemImageComponent/>
+            }
+            {(item.type===2)&&
+            <Space/>
             }
         </Card>
     )

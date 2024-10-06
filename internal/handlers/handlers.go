@@ -438,9 +438,21 @@ func (api *ApiHandler) feedPostHandlerFunc(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	contentType := r.Header.Get("Content-type")
+	mr, err := r.MultipartReader()
+	if err != nil {
+		utils.CloseWithCodeAndMessage(w, 500, fmt.Sprintf("Error while getting parts: %s", err.Error()))
+		return
+	}
 
-	err = f.AddItem(contentType, http.MaxBytesReader(w, r.Body, int64(api.MaxBodySize)))
+	np, err := mr.NextPart()
+	if err != nil {
+		utils.CloseWithCodeAndMessage(w, 500, fmt.Sprintf("Error while getting next part: %s", err.Error()))
+		return
+	}
+
+	contentType := np.Header.Get("Content-Type")
+
+	err = f.AddItem(contentType, np.FileName(), http.MaxBytesReader(w, np, int64(api.MaxBodySize)))
 
 	if err != nil {
 		switch {

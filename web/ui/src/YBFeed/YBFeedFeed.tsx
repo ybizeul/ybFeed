@@ -54,6 +54,7 @@ export function YBFeedFeed() {
         }
     },[searchParams, feedName, connection, secret])
 
+    // Setup websocket to receive feed events
     const ws = useRef<WebSocket|null>(null)
 
     useEffect(() => {
@@ -102,17 +103,11 @@ export function YBFeedFeed() {
         }
     },[secret])
 
-    // const { sendMessage, readyState } = useMemo(() => useWebSocket(
-    //     window.location.protocol.replace("http","ws") + "//" + window.location.host + "/ws/" + feedParam,
-    //     {queryParams:{"secret":secret},retryOnError: true, onMessage: handleMessage}, secret != ""),[]);
-
     // Do the actual item deletion callback
     const deleteItem = (item: YBFeedItem) => {
         setFeedItems((items) => items.filter((i) => i.name !== item.name))
         connection.DeleteItem(item)
     }
-
-    
 
     // Get current feed over http without web-socket to fetch feed secret
     // As websocket doesn't send current cookie, we have to perform a regular

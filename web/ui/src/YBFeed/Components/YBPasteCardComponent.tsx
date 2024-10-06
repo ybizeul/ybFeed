@@ -1,6 +1,6 @@
 import { useState,useEffect } from 'react'
 
-import { useParams } from 'react-router-dom'
+import { redirect, useParams } from 'react-router-dom'
 
 import { Textarea, Center, Text } from '@mantine/core';
 import { Dropzone } from '@mantine/dropzone';
@@ -8,6 +8,7 @@ import { Dropzone } from '@mantine/dropzone';
 
 import './YBPasteCardComponent.css'
 import { PasteToFeed } from '../../paste';
+import { Y } from '../../YBFeedClient';
 
 interface YBPasteCardComponentProps {
     empty?: boolean
@@ -16,8 +17,12 @@ interface YBPasteCardComponentProps {
 
 export function YBPasteCardComponent(props:YBPasteCardComponentProps) {
     const [isMobile, setIsMobile] = useState(false)
-    const {feed} = useParams()
+    const {feedName} = useParams()
 
+    if (!feedName) {
+        redirect("/")
+        return
+    }
     // const form = useForm({
     //     initialValues: {
     //       text: '',
@@ -95,7 +100,7 @@ export function YBPasteCardComponent(props:YBPasteCardComponentProps) {
 
     useEffect(() => {
         window.onpaste = (e) => {
-            PasteToFeed(e,feed!)
+            PasteToFeed(e,feedName)
         }
         return () => {
             window.onpaste = null
@@ -112,7 +117,11 @@ export function YBPasteCardComponent(props:YBPasteCardComponentProps) {
             // </form>
             }
             <Dropzone.FullScreen w="100%" ta="center"
-                onDrop={(files) => console.log('accepted files', files)}
+                onDrop={(files) => {
+                    const formData = new FormData();
+                    formData.append("file", files[0]);
+                    Y.post("/feeds/" + encodeURIComponent(feedName), formData)
+                }}
                 onReject={(files) => console.log('rejected files', files)}
                 maxSize={5 * 1024 ** 2}
                 ><Center h={"100vh"}>
