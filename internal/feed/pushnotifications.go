@@ -33,7 +33,7 @@ func (f *Feed) sendPushNotification() error {
 			b, _ := io.ReadAll(resp.Body)
 			pnL.Logger.Debug("Response", slog.String("resp", string(b)), slog.String("status", resp.Status))
 		}
-		defer resp.Body.Close()
+		//defer resp.Body.Close()
 	}
 	return nil
 }
