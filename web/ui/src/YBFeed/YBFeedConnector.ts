@@ -77,10 +77,13 @@ export class YBFeedConnector {
                 if (fe.secret) {
                     resolve(fe.secret)
                 }
-                reject(new YBFeedError(401, "Unauthorized"))
             })
             .catch((error) => {
-                reject(new YBFeedError(error.status, "Server Unavailable"))
+                if (error.status === 401) {
+                    reject(new YBFeedError(401, "Unauthorized"))
+                } else {
+                    reject(new YBFeedError(error.status, "Server Unavailable"))
+                }
             })
 
             // fetch(this.feedUrl(feedName)+"?secret="+encodeURIComponent(secret),{

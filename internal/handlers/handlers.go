@@ -266,7 +266,7 @@ func (api *ApiHandler) feedHandlerFunc(w http.ResponseWriter, r *http.Request) {
 		err = f.IsSecretValid(secret)
 		if err != nil {
 			switch {
-			case errors.Is(err, feed.FeedErrorInvalidSecret):
+			case errors.Is(err, feed.FeedErrorInvalidSecret) || errors.Is(err, feed.FeedConfigErrorPinExpired):
 				utils.CloseWithCodeAndMessage(w, 401, "Unauthorized")
 			default:
 				utils.CloseWithCodeAndMessage(w, 500, err.Error())

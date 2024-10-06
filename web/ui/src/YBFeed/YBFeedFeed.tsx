@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, useRef } from "react"
 
-import { useParams, useSearchParams, Navigate } from 'react-router-dom';
+import { useParams, useSearchParams, Navigate, redirect } from 'react-router-dom';
 
 import { notifications } from '@mantine/notifications';
 
@@ -14,12 +14,16 @@ import { defaultNotificationProps } from './config';
 import {
     IconLink, IconHash
   } from '@tabler/icons-react';
+import { PinModal } from "./Components/PinModal";
+import { PinRequest } from "./Components/PinRequest";
 
 export function YBFeedFeed() {
-    const feedParam: string = useParams().feed!
+    const { feedName } = useParams()
 
     const [searchParams] = useSearchParams()
-    const [goTo,setGoTo] = useState<string|undefined>(undefined)
+    // const navigate = useNavigate()
+
+    // const [goTo,setGoTo] = useState<string|undefined>(undefined)
     const [secret,setSecret] = useState<string>("")
     const [pinModalOpen,setPinModalOpen] = useState(false)
     const [authenticated,setAuthenticated] = useState<boolean|undefined>(undefined)
@@ -31,13 +35,32 @@ export function YBFeedFeed() {
 
     const connection = useMemo(() => new YBFeedConnector(),[])
 
+    if (!feedName) {
+        redirect("/")
+        return
+    }
+
+    // If secret is sent as part of the URL params, set secret state and
+    // redirect to the URL omitting the secret
+    useEffect(() => {
+        const s=searchParams.get("secret")
+        if (s) {
+            setSecret(s)
+            connection.AuthenticateFeed(feedName,secret)
+            .then(() => {
+                redirect("/" + feedName)
+            })
+            .catch((e) => console.log(e))
+        }
+    },[searchParams, feedName, connection, secret])
+
     const ws = useRef<WebSocket|null>(null)
 
     useEffect(() => {
         if (!secret) {
             return
         }
-        ws.current = new WebSocket(window.location.protocol.replace("http","ws") + "//" + window.location.host + "/ws/" + feedParam + "?secret=" + secret)
+        ws.current = new WebSocket(window.location.protocol.replace("http","ws") + "//" + window.location.host + "/ws/" + feedName + "?secret=" + secret)
         if (ws.current === null) {
             return
         }
@@ -86,29 +109,17 @@ export function YBFeedFeed() {
     // Do the actual item deletion callback
     const deleteItem = (item: YBFeedItem) => {
         setFeedItems((items) => items.filter((i) => i.name !== item.name))
-        connection.DeleteItem(item!)
+        connection.DeleteItem(item)
     }
 
-    // If secret is sent as part of the URL params, set secret state and
-    // redirect to the URL omitting the secret
-    useEffect(() => {
-        const s=searchParams.get("secret")
-        if (s) {
-            setSecret(s)
-            connection.AuthenticateFeed(feedParam,secret)
-            .then(() => {
-                setGoTo("/" + feedParam)
-            })
-            .catch((e) => console.log(e))
-        }
-    },[searchParams, feedParam, connection, secret])
+    
 
     // Get current feed over http without web-socket to fetch feed secret
     // As websocket doesn't send current cookie, we have to perform a regular
     // http request first to get the secret
     useEffect(() => {
         if (!secret) {
-            connection.GetFeed(feedParam)
+            connection.GetFeed(feedName)
             .then((f) => {
                 if (f && f.secret) {
                     setSecret(f.secret)
@@ -124,7 +135,7 @@ export function YBFeedFeed() {
                 }
             })
         }
-    },[secret,connection,feedParam])
+    },[secret,connection,feedName])
 
     // useEffect(() => {
     //     if (readyState === ReadyState.OPEN) {
@@ -148,7 +159,7 @@ export function YBFeedFeed() {
     }
 
     const setPIN = (pin: string) => {
-        connection.SetPIN(feedParam,pin)
+        connection.SetPIN(feedName,pin)
         .then(() => {
             notifications.show({message:"PIN set", ...defaultNotificationProps})
             setPinModalOpen(false)
@@ -160,7 +171,7 @@ export function YBFeedFeed() {
     }
 
     const sendPIN = (e: string) => {
-        connection.AuthenticateFeed(feedParam,e)
+        connection.AuthenticateFeed(feedName,e)
         .then((s) => {
             setSecret(s.toString())
         })
@@ -170,21 +181,30 @@ export function YBFeedFeed() {
     }
 
     const deleteAll = () => {
-        connection.EmptyFeed(feedParam)
+        connection.EmptyFeed(feedName)
     }
 
+    if (authenticated===false)  {
+        return (
+            <PinRequest sendPIN={sendPIN}/>
+        )
+    }
+
+    if (fatal)  {
+        return (
+            <Center>{fatal}</Center>
+        )
+    }
 
     return (
         <Box>
-        {goTo?
-        <Navigate to={goTo} />
-        :""}
-        {authenticated===true?
+        {authenticated===true&&
+        <>
             <Group gap="xs" justify="flex-end" style={{float: 'right'}}>
                 <Button size="xs" variant="outline" color="red" onClick={deleteAll}>Delete Content</Button>
-                {vapid?
-                <YBNotificationToggleComponent vapid={vapid} feedName={feedParam}/>
-                :""}
+                {vapid&&
+                <YBNotificationToggleComponent vapid={vapid} feedName={feedName }/>
+                }
                 <Menu trigger="hover" position="bottom-end" withArrow arrowPosition="center">
                     <Menu.Target>
                         <ActionIcon size="md" variant="outline" aria-label="Menu" onClick={copyLink}>
@@ -201,42 +221,15 @@ export function YBFeedFeed() {
                     </Menu.Dropdown>
                 </Menu>
             </Group>
-        :""}
 
-        <YBBreadCrumbComponent />
-        {(authenticated==undefined && !fatal)?<YBFeedItemComponent/>:""}
-        {!fatal?
-            <>
-            {authenticated===true?
-            <>
-            <Modal title="Set Temporary PIN" className="PINModal" opened={pinModalOpen} onClose={() => setPinModalOpen(false)}>
-                <div className="text-center">
-                    Please choose a PIN, it will expire after 2 minutes:
-                </div>
-                <Center>
-                <PinInput data-autofocus mt="1em" mb="1em" type="number" mask onComplete={(v) => { setPIN(v)}}/>
-                </Center>
-            </Modal>
+            <YBBreadCrumbComponent />
+            <PinModal opened={pinModalOpen} setOpened={() => setPinModalOpen(false)} setPIN={setPIN}/>
 
             <YBPasteCardComponent empty={feedItems.length === 0}/>
-
+            
             <YBFeedItemsComponent items={feedItems} onDelete={deleteItem}/>
             </>
-            :""}
-
-            {authenticated===false?
-            <>
-            <Text mt="2em" ta="center">This feed is protected by a PIN.</Text>
-            <Center>
-                <PinInput mt="2em" type="number" mask onComplete={(v) => { sendPIN(v)}}/>
-            </Center>
-            </>
-            :""}
-            </>
-        :
-            <Center>{fatal}</Center>
-        
-        }
+            }
        </Box>
     )
 }
