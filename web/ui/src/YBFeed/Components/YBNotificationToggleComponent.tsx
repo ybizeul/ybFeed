@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect } from 'react'
 
 import { ActionIcon } from '@mantine/core';
 import { IconBell } from '@tabler/icons-react';

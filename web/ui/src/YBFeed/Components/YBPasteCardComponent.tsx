@@ -2,7 +2,7 @@ import { useState,useEffect } from 'react'
 
 import { redirect, useParams } from 'react-router-dom'
 
-import { Textarea, Center, Text } from '@mantine/core';
+import { Textarea, Center } from '@mantine/core';
 import { Dropzone } from '@mantine/dropzone';
 // import { useForm } from '@mantine/form';
 
@@ -10,11 +10,7 @@ import './YBPasteCardComponent.css'
 import { PasteToFeed } from '../../paste';
 import { Y } from '../../YBFeedClient';
 
-interface YBPasteCardComponentProps {
-    onPaste?: () => void
-}
-
-export function YBPasteCardComponent(props:YBPasteCardComponentProps) {
+export function YBPasteCardComponent() {
     const [isMobile, setIsMobile] = useState(false)
     const {feedName} = useParams()
 
