@@ -541,18 +541,9 @@ func (api *ApiHandler) feedSubscriptionHandlerFunc(w http.ResponseWriter, r *htt
 		return
 	}
 
-	body, err := io.ReadAll(r.Body)
-
-	defer r.Body.Close()
-
-	if err != nil {
-		utils.CloseWithCodeAndMessage(w, 500, "Unable to read subscription")
-		return
-	}
-
 	var s webpush.Subscription
 
-	err = json.Unmarshal(body, &s)
+	err = json.NewDecoder(r.Body).Decode(&s)
 
 	if err != nil {
 		utils.CloseWithCodeAndMessage(w, 500, "Unable to parse subscription")

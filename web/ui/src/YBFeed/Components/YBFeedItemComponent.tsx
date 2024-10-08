@@ -114,7 +114,6 @@ function YBHeadingComponent(props: FeedItemHeadingComponentProps) {
 
 export interface YBFeedItemComponentProps {
     showCopyButton?: boolean
-    onUpdate?: (item: YBFeedItem) => void
     onDelete?: (item: YBFeedItem) => void
 }
 

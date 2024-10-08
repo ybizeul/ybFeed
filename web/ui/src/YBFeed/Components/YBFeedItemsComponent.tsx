@@ -1,23 +1,75 @@
-import { createContext } from 'react'
+import { createContext, useEffect, useMemo, useRef, useState } from 'react'
 import { Space } from "@mantine/core"
 import { YBFeedItemComponent } from '.'
-import { YBFeedItem } from '../'
+import { YBFeed, YBFeedConnector, YBFeedItem } from '../'
 
 export const FeedItemContext = createContext<undefined|YBFeedItem>(undefined);
 
 export interface YBFeedItemsComponentProps {
-    items: YBFeedItem[],
-    onUpdate?: (item: YBFeedItem) => void
+    feedName: string
+    secret: string
     onDelete?: (item: YBFeedItem) => void
 }
 
 export function YBFeedItemsComponent(props: YBFeedItemsComponentProps) {
-    const { items, onUpdate } = props
+    const { feedName, secret } = props
+
+    const [feedItems, setFeedItems] = useState<YBFeedItem[]>([])
+
+    const connection = useMemo(() => new YBFeedConnector(),[])
+
+    // Setup websocket to receive feed events
+    const ws = useRef<WebSocket|null>(null)
+
+    // Do the actual item deletion callback
+    const deleteItem = (item: YBFeedItem) => {
+        setFeedItems((items) => items.filter((i) => i.name !== item.name))
+        connection.DeleteItem(item)
+    }
+
+    useEffect(() => {
+        ws.current = new WebSocket(window.location.protocol.replace("http","ws") + "//" + window.location.host + "/ws/" + feedName + "?secret=" + secret)
+        if (ws.current === null) {
+            return
+        }
+        ws.current.onopen = () => {
+            ws.current?.send("feed")
+        }
+
+        ws.current.onmessage = (m:WebSocketEventMap["message"]) => {
+            const message_data = JSON.parse(m.data)
+            if (message_data) {
+                if (Object.prototype.hasOwnProperty.call(message_data, "items")) {
+                    const f = (message_data as YBFeed)
+                    setFeedItems(f.items)
+   
+                }
+                if (Object.prototype.hasOwnProperty.call(message_data, "action")) {
+                    interface ActionMessage {
+                        action: string,
+                        item: YBFeedItem
+                    }
+                    const am = (message_data as ActionMessage)
+                    if (am.action === "remove") {
+                        setFeedItems((items) => items.filter((i) => i.name !== am.item.name))
+                    } else if (am.action === "add") {
+                        setFeedItems((items) => [am.item].concat(items))
+                    } else if (am.action === "empty") {
+                        setFeedItems([])
+                    }
+                }
+            }
+        }
+        return () => {
+            ws.current?.close()
+        }
+    },[])
+
     return(
         <>
-        {items.map((f:YBFeedItem) =>
+        {feedItems.map((f:YBFeedItem) =>
         <FeedItemContext.Provider value={f} key={f.name}>
-            <YBFeedItemComponent onUpdate={(f) => { if (onUpdate) { onUpdate(f)}}} onDelete={props.onDelete} />
+            <YBFeedItemComponent onDelete={deleteItem} />
         </FeedItemContext.Provider>
         )}
         <Space h="md" />

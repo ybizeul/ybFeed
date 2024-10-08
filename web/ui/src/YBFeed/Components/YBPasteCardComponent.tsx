@@ -11,7 +11,6 @@ import { PasteToFeed } from '../../paste';
 import { Y } from '../../YBFeedClient';
 
 interface YBPasteCardComponentProps {
-    empty?: boolean
     onPaste?: () => void
 }
 
@@ -99,17 +98,16 @@ export function YBPasteCardComponent(props:YBPasteCardComponentProps) {
     }, []);
 
     useEffect(() => {
-        window.onpaste = (e) => {
+        document.onpaste = (e) => {
             PasteToFeed(e,feedName)
         }
         return () => {
-            window.onpaste = null
+            document.onpaste = null
         }
     })
 
     return (
         <Center my="2em" h="100%" style={{ flexDirection:"column"}}>
-            {(props.empty === true)?<Text>Your feed is empty.</Text>:""}
             {isMobile&&
             // <form style={{width:"100%"}} onSubmit={form.onSubmit((values) => handleFinish(values.text))} >
                 <Textarea ta="center" pt="1em" variant="unstyled" placeholder='Paste Here' value={""} onChange={() => {}}

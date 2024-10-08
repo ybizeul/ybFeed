@@ -22,14 +22,13 @@ export function YBFeedFeed() {
 
     const [searchParams] = useSearchParams()
     // const navigate = useNavigate()
+    const [secret,setSecret] = useState<string>("")
 
     // const [goTo,setGoTo] = useState<string|undefined>(undefined)
-    const [secret,setSecret] = useState<string>("")
     const [pinModalOpen,setPinModalOpen] = useState(false)
     const [authenticated,setAuthenticated] = useState<boolean|undefined>(undefined)
     const [vapid, setVapid] = useState<string|undefined>(undefined)
 
-    const [feedItems, setFeedItems] = useState<YBFeedItem[]>([])
 
     const [fatal, setFatal] = useState(false)
 
@@ -54,61 +53,6 @@ export function YBFeedFeed() {
         }
     },[searchParams, feedName, connection, secret])
 
-    // Setup websocket to receive feed events
-    const ws = useRef<WebSocket|null>(null)
-
-    useEffect(() => {
-        if (!secret) {
-            return
-        }
-        ws.current = new WebSocket(window.location.protocol.replace("http","ws") + "//" + window.location.host + "/ws/" + feedName + "?secret=" + secret)
-        if (ws.current === null) {
-            return
-        }
-        ws.current.onopen = () => {
-            ws.current?.send("feed")
-        }
-
-        ws.current.onmessage = (m:WebSocketEventMap["message"]) => {
-            const message_data = JSON.parse(m.data)
-            if (message_data) {
-                if (Object.prototype.hasOwnProperty.call(message_data, "items")) {
-                    const f = (message_data as YBFeed)
-                    if (f.items) {
-                        setFeedItems(f.items)
-                        setAuthenticated(true)
-                    }
-                    if (f.secret) {
-                        setSecret(f.secret)
-                    }
-                }
-                if (Object.prototype.hasOwnProperty.call(message_data, "action")) {
-                    interface ActionMessage {
-                        action: string,
-                        item: YBFeedItem
-                    }
-                    const am = (message_data as ActionMessage)
-                    if (am.action === "remove") {
-                        setFeedItems((items) => items.filter((i) => i.name !== am.item.name))
-                    } else if (am.action === "add") {
-                        setFeedItems((items) => [am.item].concat(items))
-                    } else if (am.action === "empty") {
-                        setFeedItems([])
-                    }
-                }
-            }
-        }
-        return () => {
-            ws.current?.close()
-        }
-    },[secret])
-
-    // Do the actual item deletion callback
-    const deleteItem = (item: YBFeedItem) => {
-        setFeedItems((items) => items.filter((i) => i.name !== item.name))
-        connection.DeleteItem(item)
-    }
-
     // Get current feed over http without web-socket to fetch feed secret
     // As websocket doesn't send current cookie, we have to perform a regular
     // http request first to get the secret
@@ -119,6 +63,7 @@ export function YBFeedFeed() {
                 if (f && f.secret) {
                     setSecret(f.secret)
                     setVapid(f.vapidpublickey)
+                    setAuthenticated(true)
                 }
             })
             .catch((e) => {
@@ -191,6 +136,7 @@ export function YBFeedFeed() {
         )
     }
 
+    console.log("render YBFeedFeed")
     return (
         <Box>
         {authenticated===true&&
@@ -198,7 +144,7 @@ export function YBFeedFeed() {
             <Group gap="xs" justify="flex-end" style={{float: 'right'}}>
                 <Button size="xs" variant="outline" color="red" onClick={deleteAll}>Delete Content</Button>
                 {vapid&&
-                <YBNotificationToggleComponent vapid={vapid} feedName={feedName }/>
+                <YBNotificationToggleComponent vapid={vapid} feedName={feedName}/>
                 }
                 <Menu trigger="hover" position="bottom-end" withArrow arrowPosition="center">
                     <Menu.Target>
@@ -220,9 +166,9 @@ export function YBFeedFeed() {
             <YBBreadCrumbComponent />
             <PinModal opened={pinModalOpen} setOpened={() => setPinModalOpen(false)} setPIN={setPIN}/>
 
-            <YBPasteCardComponent empty={feedItems.length === 0}/>
+            <YBPasteCardComponent/>
             
-            <YBFeedItemsComponent items={feedItems} onDelete={deleteItem}/>
+            <YBFeedItemsComponent feedName={feedName} secret={secret}/>
             </>
             }
        </Box>

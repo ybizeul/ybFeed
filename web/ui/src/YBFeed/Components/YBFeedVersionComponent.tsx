@@ -6,9 +6,7 @@ export function YBFeedVersionComponent() {
         useEffect(() => {
             fetch("/api")
             .then(r => {
-                console.log(r)
                 const v = r.headers.get("Ybfeed-Version")
-                console.log(v)
                 if (v !== null && v !== "") {
                     setVersion(v)
                 } else {
