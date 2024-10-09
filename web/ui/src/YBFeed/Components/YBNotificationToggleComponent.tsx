@@ -103,7 +103,7 @@ export function YBNotificationToggleComponent(props:NotificationToggleProps) {
                 .then((subscription) => {
                     console.log("got subscription", subscription)
                     if (subscription === null) {
-                        //setLoading(true)
+                        setLoading(true)
                         console.log("subscribing")
                         Subscribe(vapid)
                             .then((subscription) => {
@@ -111,13 +111,13 @@ export function YBNotificationToggleComponent(props:NotificationToggleProps) {
                                 const s = subscription as PushSubscription
                                 console.log("got subscription", subscription)
                                 if (s.endpoint) {
-                                    //setNotificationsOn(true)
+                                    setNotificationsOn(true)
                                     return
                                 }
-                                throw new Error("Unable to subscribe")
+                                throw new Error("empty endpoint")
                             })
                             .catch(e => {
-                                //setLoading(false)
+                                setLoading(false)
                                 console.log(e)
                                 notifications.show({message:"Unable to subscribe", color:"red", ...defaultNotificationProps})
                             })
@@ -144,7 +144,7 @@ export function YBNotificationToggleComponent(props:NotificationToggleProps) {
                                     setNotificationsOn(true)
                                     return
                                 }
-                                throw new Error("Unable to subscribe")
+                                throw new Error("empty endpoint")
                             })
                             .catch(e => {
                                 setLoading(false)
