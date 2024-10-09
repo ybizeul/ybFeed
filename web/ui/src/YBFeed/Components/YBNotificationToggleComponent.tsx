@@ -8,6 +8,8 @@ import { YBFeedConnector } from '../'
 
 import { defaultNotificationProps } from '../config';
 
+import { Subscribe } from '../../notifications';
+
 interface NotificationToggleProps {
     vapid: string
     feedName: string 
@@ -112,19 +114,21 @@ export function YBNotificationToggleComponent(props:NotificationToggleProps) {
                     if (subscription === null) {
                         setLoading(true)
                         console.log("subscribing")
-                        subscribe()
-                            .then((b) => {
-                                console.log("done",b)
-
+                        Subscribe(vapid)
+                            .then((subscription) => {
                                 setLoading(false)
-                                if (b) {
+                                const s = subscription as PushSubscription
+                                console.log("got subscription", subscription)
+                                if (s.endpoint) {
                                     setNotificationsOn(true)
+                                    return
                                 }
+                                throw new Error("Unable to subscribe")
                             })
                             .catch(e => {
                                 setLoading(false)
                                 console.log(e)
-                                notifications.show({message:"Error", color:"red", ...defaultNotificationProps})
+                                notifications.show({message:"Unable to subscribe", color:"red", ...defaultNotificationProps})
                             })
                         return
                     }
@@ -159,7 +163,7 @@ export function YBNotificationToggleComponent(props:NotificationToggleProps) {
     }
 
     useEffect(() => {
-        if ('serviceWorker' in navigator) {
+        if ('serviceWorker' in navigator && feedName) {
             console.log("registering service worker")
             navigator.serviceWorker.register('/service-worker.js',{scope: "/" + feedName})
                 .then((registration) => {
