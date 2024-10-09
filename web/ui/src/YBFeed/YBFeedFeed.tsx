@@ -45,7 +45,7 @@ export function YBFeedFeed() {
         const s=searchParams.get("secret")
         if (s) {
             setSecret(s)
-            connection.AuthenticateFeed(feedName,secret)
+            connection.AuthenticateFeed(feedName,s)
             .then(() => {
                 redirect("/" + feedName)
             })
