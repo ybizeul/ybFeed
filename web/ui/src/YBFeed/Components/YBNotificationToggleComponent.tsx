@@ -21,45 +21,45 @@ export function YBNotificationToggleComponent(props:NotificationToggleProps) {
     const [loading,setLoading] = useState(false)
     const [canPushNotifications, setCanPushNotification] = useState(false)
 
-    const subscribe = (): Promise<boolean> => {
-            return new Promise((resolve, reject) => {
-                if (!vapid) {
-                    reject("VAPID not declared")
-                }
-                const connection = new YBFeedConnector()
+    // const subscribe = (): Promise<boolean> => {
+    //         return new Promise((resolve, reject) => {
+    //             if (!vapid) {
+    //                 reject("VAPID not declared")
+    //             }
+    //             const connection = new YBFeedConnector()
 
-                console.log("getting registration for", window.location.href)
-                navigator.serviceWorker.getRegistration(window.location.href)
-                    .then((registration) => {  
-                        if (!registration) {
-                            console.log("no registration")
-                            return
-                        }
-                        console.log("subscribing",vapid)
-                        return registration.pushManager.subscribe({
-                            userVisibleOnly: true,
-                            applicationServerKey: urlBase64ToUint8Array(vapid),
-                        });
-                    })
-                    .then((subscription) => {
-                        console.log("got subscription", subscription)
-                        if (!subscription) {
-                            reject("Unable to subscribe (empty subscription)")
-                        }
-                        console.log("adding subscription to backend", subscription)
+    //             console.log("getting registration for", window.location.href)
+    //             navigator.serviceWorker.getRegistration(window.location.href)
+    //                 .then((registration) => {  
+    //                     if (!registration) {
+    //                         console.log("no registration")
+    //                         return
+    //                     }
+    //                     console.log("subscribing",vapid)
+    //                     return registration.pushManager.subscribe({
+    //                         userVisibleOnly: true,
+    //                         applicationServerKey: urlBase64ToUint8Array(vapid),
+    //                     });
+    //                 })
+    //                 .then((subscription) => {
+    //                     console.log("got subscription", subscription)
+    //                     if (!subscription) {
+    //                         reject("Unable to subscribe (empty subscription)")
+    //                     }
+    //                     console.log("adding subscription to backend", subscription)
 
-                        connection.AddSubscription(feedName,JSON.stringify(subscription))
-                            .then(() => {
-                                console.log("subscription added")
-                                resolve(true)
-                            })
-                    })
-                    .catch((err) => {
-                        setLoading(false)
-                        notifications.show({title:"Error", message: err.message, color: "red", ...defaultNotificationProps})
-                    });
-            })
-    }
+    //                     connection.AddSubscription(feedName,JSON.stringify(subscription))
+    //                         .then(() => {
+    //                             console.log("subscription added")
+    //                             resolve(true)
+    //                         })
+    //                 })
+    //                 .catch((err) => {
+    //                     setLoading(false)
+    //                     notifications.show({title:"Error", message: err.message, color: "red", ...defaultNotificationProps})
+    //                 });
+    //         })
+    // }
     
     async function unsubscribe(): Promise<boolean> {
         return new Promise((resolve, reject) => {
@@ -86,15 +86,6 @@ export function YBNotificationToggleComponent(props:NotificationToggleProps) {
                 .catch(err => console.error(err));
         })
     }
-    
-    function urlBase64ToUint8Array(base64String: string) {
-        const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-        const base64 = (base64String + padding)
-            .replace(/-/g, '+')
-            .replace(/_/g, '/');
-        const rawData = window.atob(base64);
-        return Uint8Array.from([...rawData].map(char => char.charCodeAt(0)));
-    }
 
     const toggleNotifications = () => {
         console.log("toggle notification")
@@ -112,7 +103,7 @@ export function YBNotificationToggleComponent(props:NotificationToggleProps) {
                 .then((subscription) => {
                     console.log("got subscription", subscription)
                     if (subscription === null) {
-                        setLoading(true)
+                        //setLoading(true)
                         console.log("subscribing")
                         Subscribe(vapid)
                             .then((subscription) => {
@@ -120,13 +111,13 @@ export function YBNotificationToggleComponent(props:NotificationToggleProps) {
                                 const s = subscription as PushSubscription
                                 console.log("got subscription", subscription)
                                 if (s.endpoint) {
-                                    setNotificationsOn(true)
+                                    //setNotificationsOn(true)
                                     return
                                 }
                                 throw new Error("Unable to subscribe")
                             })
                             .catch(e => {
-                                setLoading(false)
+                                //setLoading(false)
                                 console.log(e)
                                 notifications.show({message:"Unable to subscribe", color:"red", ...defaultNotificationProps})
                             })
@@ -144,18 +135,21 @@ export function YBNotificationToggleComponent(props:NotificationToggleProps) {
                     else {
                         setLoading(true)
                         console.log("subscribing")
-                        subscribe()
-                            .then((b) => {
-                                console.log("done",b)
+                        Subscribe(vapid)
+                            .then((subscription) => {
                                 setLoading(false)
-                                if (b) {
+                                const s = subscription as PushSubscription
+                                console.log("got subscription", subscription)
+                                if (s.endpoint) {
                                     setNotificationsOn(true)
+                                    return
                                 }
+                                throw new Error("Unable to subscribe")
                             })
                             .catch(e => {
                                 setLoading(false)
                                 console.log(e)
-                                notifications.show({message:"Error", color:"red", ...defaultNotificationProps})
+                                notifications.show({message:"Unable to subscribe", color:"red", ...defaultNotificationProps})
                             })
                     }
                 });
@@ -183,6 +177,9 @@ export function YBNotificationToggleComponent(props:NotificationToggleProps) {
                     if (subscription) {
                         setNotificationsOn(true)
                     }
+                })
+                .catch(error => {
+                    console.error('Service Worker registration failed:', error);
                 })
         }
     })
