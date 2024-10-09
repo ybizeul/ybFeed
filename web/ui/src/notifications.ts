@@ -14,7 +14,7 @@ export function Subscribe(vapid: string) {
                 console.log("subscribing",vapid)
                 return registration.pushManager.subscribe({
                     userVisibleOnly: true,
-                    applicationServerKey: urlBase64ToUint8Array(vapid),
+                    applicationServerKey: vapid,
                 });
             })
             .then((subscription) => {
