@@ -42,6 +42,7 @@ export class YBFeedConnector {
             //     }
             // })
             .catch((e) => {
+                console.log(e)
                 reject(new YBFeedError(e.status, "Server Unavailable"))
             })
 

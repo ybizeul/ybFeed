@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react"
 
-import { useParams, useSearchParams, redirect } from 'react-router-dom';
+import { useParams, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 
 import { notifications } from '@mantine/notifications';
 
@@ -19,7 +19,8 @@ import { PinRequest } from "./Components/PinRequest";
 
 export function YBFeedFeed() {
     const { feedName } = useParams()
-
+    const navigate = useNavigate()
+    const location = useLocation()
     const [searchParams] = useSearchParams()
     // const navigate = useNavigate()
     const [secret,setSecret] = useState<string>("")
@@ -35,7 +36,7 @@ export function YBFeedFeed() {
     const connection = useMemo(() => new YBFeedConnector(),[])
 
     if (!feedName) {
-        redirect("/")
+        navigate("/")
         return
     }
 
@@ -44,10 +45,10 @@ export function YBFeedFeed() {
     useEffect(() => {
         const s=searchParams.get("secret")
         if (s) {
-            setSecret(s)
             connection.AuthenticateFeed(feedName,s)
-            .then(() => {
-                redirect("/" + feedName)
+            .then((se) => {
+                console.log(se)
+                navigate("/" + feedName)
             })
             .catch((e) => console.log(e))
         }
@@ -57,16 +58,19 @@ export function YBFeedFeed() {
     // As websocket doesn't send current cookie, we have to perform a regular
     // http request first to get the secret
     useEffect(() => {
-        if (!secret) {
+        console.log(secret)
+        if (!secret && !searchParams.get("secret")) {
             connection.GetFeed(feedName)
             .then((f) => {
                 if (f && f.secret) {
                     setSecret(f.secret)
                     setVapid(f.vapidpublickey)
+                    console.log("setting authenticated true")
                     setAuthenticated(true)
                 }
             })
             .catch((e) => {
+                console.log(e)
                 if (e.status === 401) {
                     setAuthenticated(false)
                 }
@@ -75,7 +79,7 @@ export function YBFeedFeed() {
                 }
             })
         }
-    },[secret,connection,feedName])
+    },[secret,connection,feedName,location])
 
     // useEffect(() => {
     //     if (readyState === ReadyState.OPEN) {
