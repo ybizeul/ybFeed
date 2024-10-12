@@ -12,6 +12,7 @@ import (
 	"path"
 	"time"
 
+	ws "github.com/gorilla/websocket"
 	"golang.org/x/exp/slog"
 
 	"github.com/Appboy/webpush-go"
@@ -188,14 +189,14 @@ func (api *ApiHandler) GetServer() *chi.Mux {
 	})
 
 	r.Route("/api/feeds", func(r chi.Router) {
-		r.Get("/{feedName}", api.feedHandlerFunc)
-		r.Post("/{feedName}", api.feedPostHandlerFunc)
-		r.Patch("/{feedName}", api.feedPatchHandlerFunc)
-		r.Post("/{feedName}/subscription", api.feedSubscriptionHandlerFunc)
-		r.Delete("/{feedName}/subscription", api.feedUnsubscribeHandlerFunc)
-		r.Delete("/{feedName}/items", api.feedItemEmptyHandlerFunc)
-		r.Get("/{feedName}/items/{itemName}", api.feedItemHandlerFunc)
-		r.Delete("/{feedName}/items/{itemName}", api.feedItemDeleteHandlerFunc)
+		r.Get("/{feedName}", api.feedGetFunc)
+		r.Post("/{feedName}", api.feedPostFunc)
+		r.Patch("/{feedName}", api.feedPatchFunc)
+		r.Post("/{feedName}/subscription", api.subscriptionPostFunc)
+		r.Delete("/{feedName}/subscription", api.subscriptionDeleteFunc)
+		r.Delete("/{feedName}/items", api.itemsDeleteFunc)
+		r.Get("/{feedName}/items/{itemName}", api.itemGetFunc)
+		r.Delete("/{feedName}/items/{itemName}", api.itemDeleteFunc)
 	})
 	r.Get("/*", RootHandlerFunc)
 
@@ -216,33 +217,46 @@ func (api *ApiHandler) feedWSHandler(w http.ResponseWriter, r *http.Request) {
 	feedName, _ := url.QueryUnescape(chi.URLParam(r, "feedName"))
 
 	if feedName == "" {
-		utils.CloseWithCodeAndMessage(w, 500, "Unable to obtain feed name")
+		WriteError(w, http.StatusBadRequest, "Unable to obtain feed name")
+		return
 	}
 
 	_, err := api.FeedManager.GetFeedWithAuth(feedName, secret)
 
 	if err != nil {
+		var upgrader = ws.Upgrader{}
+		c, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			return
+			// utils.CloseWithCodeAndMessage(w, 500, "Unable to upgrade WebSocket")
+		}
 		switch {
 		case errors.Is(err, feed.FeedErrorNotFound):
-			utils.CloseWithCodeAndMessage(w, 404, fmt.Sprintf("feed '%s' not found", feedName))
+			//WriteError(w, http.StatusNotFound, "feed '%s' not found", feedName)
+			c.WriteControl(ws.CloseMessage, ws.FormatCloseMessage(http.StatusNotFound+4000, ""), time.Now().Add(time.Second))
+
 		case errors.Is(err, feed.FeedErrorInvalidSecret):
-			utils.CloseWithCodeAndMessage(w, 401, "Unauthorized")
+			//WriteError(w, http.StatusUnauthorized, "Invalid secret")
+			c.WriteControl(ws.CloseMessage, ws.FormatCloseMessage(http.StatusUnauthorized+4000, ""), time.Now().Add(time.Second))
 		default:
-			utils.CloseWithCodeAndMessage(w, 500, fmt.Sprintf("Error while getting feed: %s", err.Error()))
+			//WriteError(w, http.StatusInternalServerError, "Error while getting feed: %s", err.Error())
+			c.WriteControl(ws.CloseMessage, ws.FormatCloseMessage(http.StatusInternalServerError+4000, ""), time.Now().Add(time.Second))
 		}
+		c.Close()
 		return
 	}
 
 	api.WebSocketManager.RunSocketForFeed(feedName, w, r)
 }
 
-func (api *ApiHandler) feedHandlerFunc(w http.ResponseWriter, r *http.Request) {
+func (api *ApiHandler) feedGetFunc(w http.ResponseWriter, r *http.Request) {
 	hL.Logger.Debug("Feed API request", slog.Any("request_uri", r.RequestURI))
 
 	feedName, _ := url.QueryUnescape(chi.URLParam(r, "feedName"))
 
 	if feedName == "" {
-		utils.CloseWithCodeAndMessage(w, 500, "Unable to obtain feed name")
+		WriteError(w, http.StatusBadRequest, "Unable to obtain feed name")
+		return
 	}
 
 	var f *feed.Feed
@@ -252,16 +266,18 @@ func (api *ApiHandler) feedHandlerFunc(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		if errors.Is(err, feed.FeedErrorNotFound) {
-			f, err = feed.NewFeed(path.Join(api.BasePath, feedName))
+			_, err = feed.NewFeed(path.Join(api.BasePath, feedName))
 			if err != nil {
 				utils.CloseWithCodeAndMessage(w, 500, err.Error())
 			}
+			f, _ = api.FeedManager.GetFeed(feedName)
 		} else {
 			utils.CloseWithCodeAndMessage(w, 500, err.Error())
 			return
 		}
 	} else {
 		secret, _ := utils.GetSecret(r)
+		hL.Logger.Debug("secret", slog.String("secret", secret))
 
 		err = f.IsSecretValid(secret)
 		if err != nil {
@@ -298,7 +314,7 @@ func (api *ApiHandler) feedHandlerFunc(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (api *ApiHandler) feedPatchHandlerFunc(w http.ResponseWriter, r *http.Request) {
+func (api *ApiHandler) feedPatchFunc(w http.ResponseWriter, r *http.Request) {
 	hL.Logger.Debug("Feed API Set PIN request", slog.Any("request", r))
 	secret, _ := utils.GetSecret(r)
 
@@ -338,7 +354,7 @@ func (api *ApiHandler) feedPatchHandlerFunc(w http.ResponseWriter, r *http.Reque
 		return
 	}
 }
-func (api *ApiHandler) feedItemEmptyHandlerFunc(w http.ResponseWriter, r *http.Request) {
+func (api *ApiHandler) itemsDeleteFunc(w http.ResponseWriter, r *http.Request) {
 	hL.Logger.Debug("Item API EMPTY request", slog.Any("request", r))
 
 	secret, _ := utils.GetSecret(r)
@@ -368,7 +384,7 @@ func (api *ApiHandler) feedItemEmptyHandlerFunc(w http.ResponseWriter, r *http.R
 	}
 }
 
-func (api *ApiHandler) feedItemHandlerFunc(w http.ResponseWriter, r *http.Request) {
+func (api *ApiHandler) itemGetFunc(w http.ResponseWriter, r *http.Request) {
 	hL.Logger.Debug("Item API GET request", slog.Any("request", r))
 
 	secret, _ := utils.GetSecret(r)
@@ -414,7 +430,7 @@ func (api *ApiHandler) feedItemHandlerFunc(w http.ResponseWriter, r *http.Reques
 	}
 }
 
-func (api *ApiHandler) feedPostHandlerFunc(w http.ResponseWriter, r *http.Request) {
+func (api *ApiHandler) feedPostFunc(w http.ResponseWriter, r *http.Request) {
 	hL.Logger.Debug("Item API POST request", slog.Any("request", r))
 
 	secret, _ := utils.GetSecret(r)
@@ -471,7 +487,7 @@ func (api *ApiHandler) feedPostHandlerFunc(w http.ResponseWriter, r *http.Reques
 	}
 }
 
-func (api *ApiHandler) feedItemDeleteHandlerFunc(w http.ResponseWriter, r *http.Request) {
+func (api *ApiHandler) itemDeleteFunc(w http.ResponseWriter, r *http.Request) {
 	hL.Logger.Debug("Item API DELETE request", slog.Any("request", r))
 
 	secret, _ := utils.GetSecret(r)
@@ -516,7 +532,7 @@ func (api *ApiHandler) feedItemDeleteHandlerFunc(w http.ResponseWriter, r *http.
 	}
 }
 
-func (api *ApiHandler) feedSubscriptionHandlerFunc(w http.ResponseWriter, r *http.Request) {
+func (api *ApiHandler) subscriptionPostFunc(w http.ResponseWriter, r *http.Request) {
 
 	hL.Logger.Debug("Feed subscription request", slog.Any("request", r))
 
@@ -558,7 +574,7 @@ func (api *ApiHandler) feedSubscriptionHandlerFunc(w http.ResponseWriter, r *htt
 	}
 }
 
-func (api *ApiHandler) feedUnsubscribeHandlerFunc(w http.ResponseWriter, r *http.Request) {
+func (api *ApiHandler) subscriptionDeleteFunc(w http.ResponseWriter, r *http.Request) {
 
 	hL.Logger.Debug("Feed subscription request", slog.Any("request", r))
 

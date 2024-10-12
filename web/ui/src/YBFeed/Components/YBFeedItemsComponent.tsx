@@ -2,6 +2,7 @@ import { createContext, useEffect, useRef, useState } from 'react'
 import { Space } from "@mantine/core"
 import { YBFeedItemComponent } from '.'
 import { Connector, YBFeed, YBFeedItem } from '../'
+import { useNavigate } from 'react-router-dom';
 
 export const FeedItemContext = createContext<undefined|YBFeedItem>(undefined);
 
@@ -14,6 +15,7 @@ export interface YBFeedItemsComponentProps {
 export function YBFeedItemsComponent(props: YBFeedItemsComponentProps) {
     const { feedName, secret } = props
 
+    const navigate = useNavigate()
     const [feedItems, setFeedItems] = useState<YBFeedItem[]>([])
 
     // Setup websocket to receive feed events
@@ -28,7 +30,16 @@ export function YBFeedItemsComponent(props: YBFeedItemsComponentProps) {
     useEffect(() => {
         const webSocketURL = window.location.protocol.replace("http","ws") + "//" + window.location.host + "/ws/" + feedName + "?secret=" + secret
 
+        function disconnect() {
+            if (ws.current === null) {
+                return
+            }
+            ws.current.close()
+            ws.current = null
+        }
+
         function connect() {
+            disconnect()
             ws.current = new WebSocket(webSocketURL)
             if (ws.current === null) {
                 return
@@ -63,11 +74,14 @@ export function YBFeedItemsComponent(props: YBFeedItemsComponentProps) {
                 }
             }
 
-            ws.current.onclose = () => {
-                console.log("websocket closed")
+            ws.current.onclose = (e) => {
+                console.log("websocket closed : ",e)
 
+                if (e.code > 4000) {
+                    navigate("/")
+                    return
+                }
                 // Try to reconnect
-                ws.current = null
                 setTimeout(() => {
                     console.log("reconnecting")
                     connect()
