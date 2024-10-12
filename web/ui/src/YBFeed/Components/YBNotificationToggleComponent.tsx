@@ -112,6 +112,11 @@ export function YBNotificationToggleComponent(props:NotificationToggleProps) {
                                 console.log("got subscription", subscription)
                                 if (s.endpoint) {
                                     setNotificationsOn(true)
+                                    const connection = new YBFeedConnector()
+                                    connection.AddSubscription(feedName,JSON.stringify(subscription))
+                                    .then(() => {
+                                        console.log("subscription added")
+                                    })
                                     return
                                 }
                                 throw new Error("empty endpoint")
