@@ -6,7 +6,6 @@ import { notifications } from '@mantine/notifications';
 
 import { Menu, ActionIcon, Center, Group, rem, Button, Box} from '@mantine/core';
 
-import { YBFeedConnector } from '.'
 
 import { YBBreadCrumbComponent, YBPasteCardComponent, YBFeedItemsComponent, YBNotificationToggleComponent } from './Components'
 import { defaultNotificationProps } from './config';
@@ -16,6 +15,7 @@ import {
   } from '@tabler/icons-react';
 import { PinModal } from "./Components/PinModal";
 import { PinRequest } from "./Components/PinRequest";
+import { Connector } from "./YBFeedConnector";
 
 export function YBFeedFeed() {
     const { feedName } = useParams()
@@ -33,8 +33,6 @@ export function YBFeedFeed() {
 
     const [fatal, setFatal] = useState(false)
 
-    const connection = useMemo(() => new YBFeedConnector(),[])
-
     if (!feedName) {
         navigate("/")
         return
@@ -45,27 +43,24 @@ export function YBFeedFeed() {
     useEffect(() => {
         const s=searchParams.get("secret")
         if (s) {
-            connection.AuthenticateFeed(feedName,s)
+            Connector.AuthenticateFeed(feedName,s)
             .then((se) => {
-                console.log(se)
                 navigate("/" + feedName)
             })
             .catch((e) => console.log(e))
         }
-    },[searchParams, feedName, connection, secret])
+    },[searchParams, feedName, secret])
 
     // Get current feed over http without web-socket to fetch feed secret
     // As websocket doesn't send current cookie, we have to perform a regular
     // http request first to get the secret
     useEffect(() => {
-        console.log(secret)
         if (!secret && !searchParams.get("secret")) {
-            connection.GetFeed(feedName)
+            Connector.GetFeed(feedName)
             .then((f) => {
                 if (f && f.secret) {
                     setSecret(f.secret)
                     setVapid(f.vapidpublickey)
-                    console.log("setting authenticated true")
                     setAuthenticated(true)
                 }
             })
@@ -79,7 +74,7 @@ export function YBFeedFeed() {
                 }
             })
         }
-    },[secret,connection,feedName,location])
+    },[secret,feedName,location])
 
     // useEffect(() => {
     //     if (readyState === ReadyState.OPEN) {
@@ -103,7 +98,7 @@ export function YBFeedFeed() {
     }
 
     const setPIN = (pin: string) => {
-        connection.SetPIN(feedName,pin)
+        Connector.SetPIN(feedName,pin)
         .then(() => {
             notifications.show({message:"PIN set", ...defaultNotificationProps})
             setPinModalOpen(false)
@@ -115,7 +110,7 @@ export function YBFeedFeed() {
     }
 
     const sendPIN = (e: string) => {
-        connection.AuthenticateFeed(feedName,e)
+        Connector.AuthenticateFeed(feedName,e)
         .then((s) => {
             setSecret(s.toString())
         })
@@ -125,7 +120,7 @@ export function YBFeedFeed() {
     }
 
     const deleteAll = () => {
-        connection.EmptyFeed(feedName)
+        Connector.EmptyFeed(feedName)
     }
 
     if (authenticated===false)  {
@@ -140,7 +135,6 @@ export function YBFeedFeed() {
         )
     }
 
-    console.log("render YBFeedFeed")
     return (
         <Box>
         {authenticated===true&&

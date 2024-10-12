@@ -2,7 +2,7 @@ import { AxiosResponseHeaders } from 'axios'
 import { YBFeed, YBFeedItem, YBFeedError } from '.'
 import { Y } from '../YBFeedClient'
 
-export class YBFeedConnector {
+class YBFeedConnector {
     feedUrl(feedName: string): string {
         return "/api/feeds/"+encodeURIComponent(feedName)
     }
@@ -292,3 +292,5 @@ export class YBFeedConnector {
     }
 
 }
+
+export const Connector = new YBFeedConnector()

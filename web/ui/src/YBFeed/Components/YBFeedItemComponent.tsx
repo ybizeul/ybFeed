@@ -5,7 +5,7 @@ import { notifications } from '@mantine/notifications';
 import { IconPhoto, IconTrash, IconTxt, IconClipboardCopy, IconFile, IconDownload } from "@tabler/icons-react"
 
 import { YBFeedItemTextComponent, YBFeedItemImageComponent, copyImageItem, FeedItemContext } from '.'
-import { YBFeedConnector, YBFeedItem } from '../'
+import { Connector, YBFeedItem } from '../'
 
 import { defaultNotificationProps } from '../config';
 
@@ -129,8 +129,7 @@ export function YBFeedItemComponent(props: YBFeedItemComponentProps) {
     
     useEffect(() => {
         if (item && item!.type === 0) {
-            const connection = new YBFeedConnector()
-            connection.GetItem(item!)
+            Connector.GetItem(item!)
             .then((text) => {
                 setTextContent(text)
             })     

@@ -4,11 +4,10 @@ import { ActionIcon } from '@mantine/core';
 import { IconBell } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 
-import { YBFeedConnector } from '../'
-
 import { defaultNotificationProps } from '../config';
 
 import { Subscribe, Subscribed, Unsubscribe } from '../../notifications';
+import { Connector } from '../YBFeedConnector';
 
 interface NotificationToggleProps {
     vapid: string
@@ -24,7 +23,6 @@ export function YBNotificationToggleComponent(props:NotificationToggleProps) {
     useEffect(() => {
         navigator.serviceWorker.getRegistration()
         .then((registration) => {
-            console.log("got registration", registration)
             if (! registration) {
                 return
             }
@@ -35,156 +33,59 @@ export function YBNotificationToggleComponent(props:NotificationToggleProps) {
     useEffect(() => {
         Subscribed()
         .then((registration) => {
-            console.log("got registration", registration)
             setNotificationsOn(registration)
         })
     },[])
-    // const subscribe = (): Promise<boolean> => {
-    //         return new Promise((resolve, reject) => {
-    //             if (!vapid) {
-    //                 reject("VAPID not declared")
-    //             }
-    //             const connection = new YBFeedConnector()
-
-    //             console.log("getting registration for", window.location.href)
-    //             navigator.serviceWorker.getRegistration(window.location.href)
-    //                 .then((registration) => {  
-    //                     if (!registration) {
-    //                         console.log("no registration")
-    //                         return
-    //                     }
-    //                     console.log("subscribing",vapid)
-    //                     return registration.pushManager.subscribe({
-    //                         userVisibleOnly: true,
-    //                         applicationServerKey: urlBase64ToUint8Array(vapid),
-    //                     });
-    //                 })
-    //                 .then((subscription) => {
-    //                     console.log("got subscription", subscription)
-    //                     if (!subscription) {
-    //                         reject("Unable to subscribe (empty subscription)")
-    //                     }
-    //                     console.log("adding subscription to backend", subscription)
-
-    //                     connection.AddSubscription(feedName,JSON.stringify(subscription))
-    //                         .then(() => {
-    //                             console.log("subscription added")
-    //                             resolve(true)
-    //                         })
-    //                 })
-    //                 .catch((err) => {
-    //                     setLoading(false)
-    //                     notifications.show({title:"Error", message: err.message, color: "red", ...defaultNotificationProps})
-    //                 });
-    //         })
-    // }
-    
-    // async function unsubscribe(): Promise<boolean> {
-    //     return new Promise((resolve, reject) => {
-    //         if (!vapid) {
-    //             reject("VAPID not declared")
-    //         }
-    //         const connection = new YBFeedConnector()
-
-    //         navigator.serviceWorker.ready
-    //             .then((registration) => {  
-    //                 return registration.pushManager.getSubscription()
-    //             })
-    //             .then(function(subscription) {
-    //                 if (!subscription) {
-    //                     reject("Unable to unsubscribe (empty subscription)")
-    //                     return
-    //                 }
-    //                 subscription.unsubscribe()
-    //                 connection.RemoveSubscription(feedName,JSON.stringify(subscription))
-    //                     .then(() => {
-    //                         resolve(true)
-    //                     })
-    //             })
-    //             .catch(err => console.error(err));
-    //     })
-    // }
 
     const toggleNotifications = () => {
-        console.log("toggle notification")
-        if ('serviceWorker' in navigator) {
-            console.log("get registration for", window.location.href)
-            const connection = new YBFeedConnector()
+        navigator.serviceWorker.getRegistration()
+        .then((registration) => {
+            if (!registration) {
+                return
+            }
+            return registration.pushManager.getSubscription()
+        })
+        .then((subscription) => {
 
-            navigator.serviceWorker.getRegistration(window.location.href)
-                .then((registration) => {
-                    if (!registration) {
-                        console.log("no registration")
-                        return
-                    }
-                    return registration.pushManager.getSubscription()
-                })
+            setLoading(true)
+
+            if (subscription === null) {
+                Subscribe(vapid)
                 .then((subscription) => {
-                    console.log("got subscription", subscription)
-                    if (subscription === null) {
-                        setLoading(true)
-                        console.log("subscribing")
-                        Subscribe(vapid)
-                            .then((subscription) => {
-                                setLoading(false)
-                                const s = subscription as PushSubscription
-                                console.log("got subscription", subscription)
-                                if (s.endpoint) {
-                                    setNotificationsOn(true)
-                                    connection.AddSubscription(feedName,JSON.stringify(subscription))
-                                    .then(() => {
-                                        console.log("subscription added")
-                                    })
-                                    return
-                                }
-                                throw new Error("empty endpoint")
-                            })
-                            .catch(e => {
-                                setLoading(false)
-                                console.log(e)
-                                notifications.show({message:"Unable to subscribe", color:"red", ...defaultNotificationProps})
-                            })
-                        return
-                    }
-
-                    if (notificationsOn) {
-                        console.log("unsubscribing")
-                        Unsubscribe()
-                            .then(() => {
-                                connection.RemoveSubscription(feedName,JSON.stringify(subscription))
-                                console.log("done")
-                                setNotificationsOn(false)
-                            })
-                    }
-                    else {
-                        setLoading(true)
-                        console.log("subscribing")
-                        Subscribe(vapid)
-                            .then((subscription) => {
-                                setLoading(false)
-                                const s = subscription as PushSubscription
-                                console.log("got subscription", subscription)
-                                if (s.endpoint) {
-                                    setNotificationsOn(true)
-                                    return
-                                }
-                                throw new Error("empty endpoint")
-                            })
-                            .catch(e => {
-                                setLoading(false)
-                                console.log(e)
-                                notifications.show({message:"Unable to subscribe", color:"red", ...defaultNotificationProps})
-                            })
-                    }
-                });
-        }
+                    setNotificationsOn(true)
+                    Connector.AddSubscription(feedName,JSON.stringify(subscription))
+                    .then(() => {
+                        setLoading(false)
+                    })
+                    return
+                })
+                .catch((e: Error) => {
+                    setLoading(false)
+                    console.log(e)
+                    notifications.show({message:e.message, color:"red", ...defaultNotificationProps})
+                })
+                return
+            } else {
+                Unsubscribe()
+                .then(() => {
+                    Connector.RemoveSubscription(feedName,JSON.stringify(subscription))
+                    .then(() => {
+                        setLoading(false)
+                        setNotificationsOn(false)
+                    })
+                })
+                .catch(e => {
+                    setLoading(false)
+                    console.log(e)
+                    notifications.show({message:"Unable to unsubscribe", color:"red", ...defaultNotificationProps})
+                })
+            }
+        });
     }
-
-    console.log("render YBNotificationToggleComponent")
 
     return(
         <>
-        {canPushNotifications?
+        {canPushNotifications&&
         <ActionIcon
             size="md" 
             variant={notificationsOn?"filled":"outline"}
@@ -193,8 +94,7 @@ export function YBNotificationToggleComponent(props:NotificationToggleProps) {
             loading={loading}
             >
             <IconBell style={{ width: '70%', height: '70%' }} stroke={1.5} />
-        </ActionIcon>
-        :""}
+        </ActionIcon>}
         </>
     )
 }

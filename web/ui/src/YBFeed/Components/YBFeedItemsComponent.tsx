@@ -1,7 +1,7 @@
 import { createContext, useEffect, useMemo, useRef, useState } from 'react'
 import { Space } from "@mantine/core"
 import { YBFeedItemComponent } from '.'
-import { YBFeed, YBFeedConnector, YBFeedItem } from '../'
+import { Connector, YBFeed, YBFeedItem } from '../'
 
 export const FeedItemContext = createContext<undefined|YBFeedItem>(undefined);
 
@@ -16,15 +16,13 @@ export function YBFeedItemsComponent(props: YBFeedItemsComponentProps) {
 
     const [feedItems, setFeedItems] = useState<YBFeedItem[]>([])
 
-    const connection = useMemo(() => new YBFeedConnector(),[])
-
     // Setup websocket to receive feed events
     const ws = useRef<WebSocket|null>(null)
 
     // Do the actual item deletion callback
     const deleteItem = (item: YBFeedItem) => {
         setFeedItems((items) => items.filter((i) => i.name !== item.name))
-        connection.DeleteItem(item)
+        Connector.DeleteItem(item)
     }
 
     useEffect(() => {

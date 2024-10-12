@@ -1,54 +1,38 @@
 if ('serviceWorker' in navigator) {
-    console.log("registering service worker")
     navigator.serviceWorker.register('/service-worker.js')
         .then((registration) => {
-            console.log("got registration", registration)
             if (! registration) {
                 return
             }
-            // setCanPushNotification(registration.pushManager !== undefined)
-            // if (registration.scope === window.location.href) {
-            //     if (registration.pushManager) {
-            //         return registration.pushManager.getSubscription();
-            //     }
-            // }
         })
-        // .then((subscription) => {
-        //     console.log("got subscription", subscription)
-        //     if (subscription) {
-        //         setNotificationsOn(true)
-        //     }
-        // })
         .catch(error => {
             console.error('Service Worker registration failed:', error);
         })
 }
 
-export function Subscribe(vapid: string) {
+export function Subscribe(vapid: string): Promise<PushSubscription> {
     return new Promise((resolve, reject) => {
         if (!vapid) {
             reject("VAPID not declared")
         }
 
-        console.log("getting registration for", window.location.href)
         navigator.serviceWorker.getRegistration()
             .then((registration) => {  
                 if (!registration) {
-                    console.log("no registration")
                     return
                 }
-                console.log("subscribing",vapid)
                 registration.pushManager.subscribe({
                     userVisibleOnly: true,
                     applicationServerKey: urlBase64ToUint8Array(vapid),
                 }).then(
                     (subscription) => {
-                        console.log("got subscription", subscription)
                         if (!subscription) {
-                            reject("Unable to subscribe (empty subscription)")
+                            reject(new Error("Unable to subscribe (empty subscription)"))
+                        }
+                        if (subscription.endpoint === "") {
+                            reject(new Error("Unable to subscribe (empty endpoint)"))
                         }
                         resolve(subscription)
-                        console.log("adding subscription to backend", subscription)
                     })
             })
             .catch((err) => {
