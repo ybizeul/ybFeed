@@ -8,7 +8,7 @@ import { YBFeedConnector } from '../'
 
 import { defaultNotificationProps } from '../config';
 
-import { Subscribe } from '../../notifications';
+import { Subscribe, Subscribed, Unsubscribe } from '../../notifications';
 
 interface NotificationToggleProps {
     vapid: string
@@ -21,6 +21,24 @@ export function YBNotificationToggleComponent(props:NotificationToggleProps) {
     const [loading,setLoading] = useState(false)
     const [canPushNotifications, setCanPushNotification] = useState(false)
 
+    useEffect(() => {
+        navigator.serviceWorker.getRegistration()
+        .then((registration) => {
+            console.log("got registration", registration)
+            if (! registration) {
+                return
+            }
+            setCanPushNotification(registration.pushManager !== undefined)
+        })
+    },[])
+
+    useEffect(() => {
+        Subscribed()
+        .then((registration) => {
+            console.log("got registration", registration)
+            setNotificationsOn(registration)
+        })
+    },[])
     // const subscribe = (): Promise<boolean> => {
     //         return new Promise((resolve, reject) => {
     //             if (!vapid) {
@@ -61,36 +79,37 @@ export function YBNotificationToggleComponent(props:NotificationToggleProps) {
     //         })
     // }
     
-    async function unsubscribe(): Promise<boolean> {
-        return new Promise((resolve, reject) => {
-            if (!vapid) {
-                reject("VAPID not declared")
-            }
-            const connection = new YBFeedConnector()
+    // async function unsubscribe(): Promise<boolean> {
+    //     return new Promise((resolve, reject) => {
+    //         if (!vapid) {
+    //             reject("VAPID not declared")
+    //         }
+    //         const connection = new YBFeedConnector()
 
-            navigator.serviceWorker.ready
-                .then((registration) => {  
-                    return registration.pushManager.getSubscription()
-                })
-                .then(function(subscription) {
-                    if (!subscription) {
-                        reject("Unable to unsubscribe (empty subscription)")
-                        return
-                    }
-                    subscription.unsubscribe()
-                    connection.RemoveSubscription(feedName,JSON.stringify(subscription))
-                        .then(() => {
-                            resolve(true)
-                        })
-                })
-                .catch(err => console.error(err));
-        })
-    }
+    //         navigator.serviceWorker.ready
+    //             .then((registration) => {  
+    //                 return registration.pushManager.getSubscription()
+    //             })
+    //             .then(function(subscription) {
+    //                 if (!subscription) {
+    //                     reject("Unable to unsubscribe (empty subscription)")
+    //                     return
+    //                 }
+    //                 subscription.unsubscribe()
+    //                 connection.RemoveSubscription(feedName,JSON.stringify(subscription))
+    //                     .then(() => {
+    //                         resolve(true)
+    //                     })
+    //             })
+    //             .catch(err => console.error(err));
+    //     })
+    // }
 
     const toggleNotifications = () => {
         console.log("toggle notification")
         if ('serviceWorker' in navigator) {
             console.log("get registration for", window.location.href)
+            const connection = new YBFeedConnector()
 
             navigator.serviceWorker.getRegistration(window.location.href)
                 .then((registration) => {
@@ -112,7 +131,6 @@ export function YBNotificationToggleComponent(props:NotificationToggleProps) {
                                 console.log("got subscription", subscription)
                                 if (s.endpoint) {
                                     setNotificationsOn(true)
-                                    const connection = new YBFeedConnector()
                                     connection.AddSubscription(feedName,JSON.stringify(subscription))
                                     .then(() => {
                                         console.log("subscription added")
@@ -131,8 +149,9 @@ export function YBNotificationToggleComponent(props:NotificationToggleProps) {
 
                     if (notificationsOn) {
                         console.log("unsubscribing")
-                        unsubscribe()
+                        Unsubscribe()
                             .then(() => {
+                                connection.RemoveSubscription(feedName,JSON.stringify(subscription))
                                 console.log("done")
                                 setNotificationsOn(false)
                             })
@@ -160,34 +179,6 @@ export function YBNotificationToggleComponent(props:NotificationToggleProps) {
                 });
         }
     }
-
-    useEffect(() => {
-        if ('serviceWorker' in navigator && feedName) {
-            console.log("registering service worker")
-            navigator.serviceWorker.register('/service-worker.js',{scope: "/" + feedName})
-                .then((registration) => {
-                    console.log("got registration", registration)
-                    if (! registration) {
-                        return
-                    }
-                    setCanPushNotification(registration.pushManager !== undefined)
-                    if (registration.scope === window.location.href) {
-                        if (registration.pushManager) {
-                            return registration.pushManager.getSubscription();
-                        }
-                    }
-                })
-                .then((subscription) => {
-                    console.log("got subscription", subscription)
-                    if (subscription) {
-                        setNotificationsOn(true)
-                    }
-                })
-                .catch(error => {
-                    console.error('Service Worker registration failed:', error);
-                })
-        }
-    })
 
     console.log("render YBNotificationToggleComponent")
 

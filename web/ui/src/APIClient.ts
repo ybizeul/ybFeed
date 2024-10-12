@@ -53,14 +53,12 @@ export class APIClient {
 
     get(path: string, auth?: AxiosBasicCredentials) {
         return new Promise<unknown>((resolve, reject) => {
-            console.log(this.baseURL + path)
             this.request({
                 url: this.baseURL + path,
                 method: 'GET',
                 auth,
             })
             .then((result) => {
-                console.log(result)
                 resolve(result)
             })
             .catch(e => {
