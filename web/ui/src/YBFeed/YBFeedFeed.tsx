@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react"
+import { useEffect, useState } from "react"
 
 import { useParams, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 
@@ -44,7 +44,7 @@ export function YBFeedFeed() {
         const s=searchParams.get("secret")
         if (s) {
             Connector.AuthenticateFeed(feedName,s)
-            .then((se) => {
+            .then(() => {
                 navigate("/" + feedName)
             })
             .catch((e) => console.log(e))
