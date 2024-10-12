@@ -22,10 +22,8 @@ export function YBFeedFeed() {
     const navigate = useNavigate()
     const location = useLocation()
     const [searchParams] = useSearchParams()
-    // const navigate = useNavigate()
     const [secret,setSecret] = useState<string>("")
 
-    // const [goTo,setGoTo] = useState<string|undefined>(undefined)
     const [pinModalOpen,setPinModalOpen] = useState(false)
     const [authenticated,setAuthenticated] = useState<boolean|undefined>(undefined)
     const [vapid, setVapid] = useState<string|undefined>(undefined)
@@ -38,8 +36,10 @@ export function YBFeedFeed() {
         return
     }
 
-    // If secret is sent as part of the URL params, set secret state and
-    // redirect to the URL omitting the secret
+    // If secret is sent as part of the URL params, authenticate the feed and
+    // redirect to the URL without secret
+    // Authenticating the feed will set the authorization cookie in browser
+    // so subsequent calls will be authenticated
     useEffect(() => {
         const s=searchParams.get("secret")
         if (s) {
@@ -76,19 +76,6 @@ export function YBFeedFeed() {
         }
     },[secret,feedName,location])
 
-    // useEffect(() => {
-    //     if (readyState === ReadyState.OPEN) {
-    //         setFatal(false)
-    //         sendMessage("feed")
-    //     }
-    //     else if (readyState === ReadyState.CLOSED){
-    //         setFatal(true)
-    //     }
-    // },[readyState,sendMessage])
-
-    //
-    // Creating links to feed
-    //
     const copyLink = () => {
         const link = window.location.href + "?secret=" + secret
         navigator.clipboard.writeText(link)
