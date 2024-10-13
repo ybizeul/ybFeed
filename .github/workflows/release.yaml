@@ -25,10 +25,10 @@ jobs:
           echo "YBFEED_VERSION=`git describe --tags`"  >> $GITHUB_ENV
 
       # Build web ui
-      - name: Use Node.js 20.x
+      - name: Use Node.js 22.x
         uses: actions/setup-node@v3
         with:
-          node-version: 20.x
+          node-version: 22.x
       - run: yarn
         working-directory: ./web/ui
       - run: yarn build
