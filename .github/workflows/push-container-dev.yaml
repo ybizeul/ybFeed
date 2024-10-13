@@ -29,6 +29,8 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 22.x
+      - run: corepack enable
+        working-directory: ./web/ui
       - run: yarn
         working-directory: ./web/ui
       - run: yarn build
