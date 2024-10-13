@@ -29,9 +29,9 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 20.x
-      - run: npm install
+      - run: yarn
         working-directory: ./web/ui
-      - run: npm run build
+      - run: yarn build
         working-directory: ./web/ui
 
       # Build go binary
