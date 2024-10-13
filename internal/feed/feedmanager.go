@@ -2,6 +2,7 @@ package feed
 
 import (
 	"fmt"
+	"os"
 	"path"
 )
 
@@ -59,4 +60,25 @@ func (m *FeedManager) GetFeedWithAuth(feedName string, secret string) (*Feed, er
 	}
 
 	return result, nil
+}
+
+func (m *FeedManager) DumpSecrets() {
+	d, err := os.ReadDir(m.path)
+	if err != nil {
+		// TODO: log error
+		return
+	}
+	for _, entry := range d {
+		if !entry.IsDir() {
+			continue
+		}
+		feedPath := path.Join(m.path, entry.Name())
+
+		result, err := GetFeed(feedPath)
+		if err != nil {
+			// TODO Log error
+			return
+		}
+		fmt.Printf("Feed %s: %s\n", result.Name(), result.Config.Secret)
+	}
 }

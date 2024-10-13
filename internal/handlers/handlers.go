@@ -188,6 +188,7 @@ func (api *ApiHandler) GetServer() *chi.Mux {
 		}
 	})
 
+	r.Post("/api/secrets", api.postSecretsHandler)
 	r.Route("/api/feeds", func(r chi.Router) {
 		r.Get("/{feedName}", api.feedGetFunc)
 		r.Post("/{feedName}", api.feedPostFunc)
@@ -224,23 +225,20 @@ func (api *ApiHandler) feedWSHandler(w http.ResponseWriter, r *http.Request) {
 	_, err := api.FeedManager.GetFeedWithAuth(feedName, secret)
 
 	if err != nil {
+		// A web socket doesn't have a standard http status code, so we need
+		// to open it and close it with a relevant code
 		var upgrader = ws.Upgrader{}
 		c, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
 			return
-			// utils.CloseWithCodeAndMessage(w, 500, "Unable to upgrade WebSocket")
 		}
 		switch {
 		case errors.Is(err, feed.FeedErrorNotFound):
-			//WriteError(w, http.StatusNotFound, "feed '%s' not found", feedName)
-			c.WriteControl(ws.CloseMessage, ws.FormatCloseMessage(http.StatusNotFound+4000, ""), time.Now().Add(time.Second))
-
+			_ = c.WriteControl(ws.CloseMessage, ws.FormatCloseMessage(http.StatusNotFound+4000, ""), time.Now().Add(time.Second))
 		case errors.Is(err, feed.FeedErrorInvalidSecret):
-			//WriteError(w, http.StatusUnauthorized, "Invalid secret")
-			c.WriteControl(ws.CloseMessage, ws.FormatCloseMessage(http.StatusUnauthorized+4000, ""), time.Now().Add(time.Second))
+			_ = c.WriteControl(ws.CloseMessage, ws.FormatCloseMessage(http.StatusUnauthorized+4000, ""), time.Now().Add(time.Second))
 		default:
-			//WriteError(w, http.StatusInternalServerError, "Error while getting feed: %s", err.Error())
-			c.WriteControl(ws.CloseMessage, ws.FormatCloseMessage(http.StatusInternalServerError+4000, ""), time.Now().Add(time.Second))
+			_ = c.WriteControl(ws.CloseMessage, ws.FormatCloseMessage(http.StatusInternalServerError+4000, ""), time.Now().Add(time.Second))
 		}
 		c.Close()
 		return
@@ -623,4 +621,8 @@ func (api *ApiHandler) subscriptionDeleteFunc(w http.ResponseWriter, r *http.Req
 		utils.CloseWithCodeAndMessage(w, 500, "Unable to add subscription")
 		return
 	}
+}
+
+func (api *ApiHandler) postSecretsHandler(w http.ResponseWriter, r *http.Request) {
+	api.FeedManager.DumpSecrets()
 }
