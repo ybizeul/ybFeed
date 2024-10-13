@@ -16,6 +16,7 @@ import {
 import { PinModal } from "./Components/PinModal";
 import { PinRequest } from "./Components/PinRequest";
 import { Connector } from "./YBFeedConnector";
+import { ConfirmPopoverButton } from "./Components/ConfirmPopoverButton";
 
 export function YBFeedFeed() {
     const { feedName } = useParams()
@@ -23,6 +24,7 @@ export function YBFeedFeed() {
     const location = useLocation()
     const [searchParams] = useSearchParams()
     const [secret,setSecret] = useState<string>("")
+    const [empty,setEmpty] = useState<boolean>(false)
 
     const [pinModalOpen,setPinModalOpen] = useState(false)
     const [authenticated,setAuthenticated] = useState<boolean|undefined>(undefined)
@@ -127,7 +129,11 @@ export function YBFeedFeed() {
         {authenticated===true&&
         <>
             <Group gap="xs" justify="flex-end" style={{float: 'right'}}>
-                <Button size="xs" variant="outline" color="red" onClick={deleteAll}>Delete Content</Button>
+                {!empty&&
+                <ConfirmPopoverButton onConfirm={deleteAll} buttonTitle="Delete All" message="Do you really want to delete everything ?">
+                    <Button size="xs" variant="outline" color="red">Empty</Button>
+                </ConfirmPopoverButton>
+        }
                 {vapid&&
                 <YBNotificationToggleComponent vapid={vapid} feedName={feedName}/>
                 }
@@ -153,7 +159,7 @@ export function YBFeedFeed() {
 
             <YBPasteCardComponent/>
             
-            <YBFeedItemsComponent feedName={feedName} secret={secret}/>
+            <YBFeedItemsComponent feedName={feedName} secret={secret} setEmpty={setEmpty}/>
             </>
             }
        </Box>

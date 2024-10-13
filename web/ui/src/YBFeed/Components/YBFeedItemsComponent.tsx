@@ -10,6 +10,7 @@ export interface YBFeedItemsComponentProps {
     feedName: string
     secret: string
     onDelete?: (item: YBFeedItem) => void
+    setEmpty?: (arg0: boolean) => void
 }
 
 export function YBFeedItemsComponent(props: YBFeedItemsComponentProps) {
@@ -17,14 +18,24 @@ export function YBFeedItemsComponent(props: YBFeedItemsComponentProps) {
 
     const navigate = useNavigate()
     const [feedItems, setFeedItems] = useState<YBFeedItem[]>([])
-
     // Setup websocket to receive feed events
     const ws = useRef<WebSocket|null>(null)
 
     // Do the actual item deletion callback
     const deleteItem = (item: YBFeedItem) => {
-        setFeedItems((items) => items.filter((i) => i.name !== item.name))
         Connector.DeleteItem(item)
+    }
+
+    const removeItem = (item: YBFeedItem) => {
+        const newI = feedItems.filter((i) => i.name !== item.name)
+        setFeedItems(newI)
+        props.setEmpty && props.setEmpty(newI.length === 0)
+        props.setEmpty && props.setEmpty(newI.length === 0)
+    }
+
+    const addItem = (item: YBFeedItem) => {
+        setFeedItems((items) => [item].concat(items))
+        props.setEmpty && props.setEmpty(false)
     }
 
     useEffect(() => {
@@ -47,31 +58,6 @@ export function YBFeedItemsComponent(props: YBFeedItemsComponentProps) {
             ws.current.onopen = () => {
                 console.log("websocket connected")
                 ws.current?.send("feed")
-            }
-
-            ws.current.onmessage = (m:WebSocketEventMap["message"]) => {
-                const message_data = JSON.parse(m.data)
-                if (message_data) {
-                    if (Object.prototype.hasOwnProperty.call(message_data, "items")) {
-                        const f = (message_data as YBFeed)
-                        setFeedItems(f.items)
-    
-                    }
-                    if (Object.prototype.hasOwnProperty.call(message_data, "action")) {
-                        interface ActionMessage {
-                            action: string,
-                            item: YBFeedItem
-                        }
-                        const am = (message_data as ActionMessage)
-                        if (am.action === "remove") {
-                            setFeedItems((items) => items.filter((i) => i.name !== am.item.name))
-                        } else if (am.action === "add") {
-                            setFeedItems((items) => [am.item].concat(items))
-                        } else if (am.action === "empty") {
-                            setFeedItems([])
-                        }
-                    }
-                }
             }
 
             ws.current.onclose = (e) => {
@@ -102,6 +88,38 @@ export function YBFeedItemsComponent(props: YBFeedItemsComponentProps) {
             w.close()
         }
     },[])
+
+    useEffect(() => {
+        if (!ws.current) {
+            return
+        }
+
+        ws.current.onmessage = (m:WebSocketEventMap["message"]) => {
+            const message_data = JSON.parse(m.data)
+            if (message_data) {
+                if (Object.prototype.hasOwnProperty.call(message_data, "items")) {
+                    const f = (message_data as YBFeed)
+                    setFeedItems(f.items)
+                    props.setEmpty && props.setEmpty(f.items.length === 0)
+                }
+                if (Object.prototype.hasOwnProperty.call(message_data, "action")) {
+                    interface ActionMessage {
+                        action: string,
+                        item: YBFeedItem
+                    }
+                    const am = (message_data as ActionMessage)
+                    if (am.action === "remove") {
+                        removeItem(am.item)
+                    } else if (am.action === "add") {
+                        addItem(am.item)
+                    } else if (am.action === "empty") {
+                        setFeedItems([])
+                        props.setEmpty && props.setEmpty(true)
+                    }
+                }
+            }
+        }
+    },[feedItems])
 
     return(
         <>

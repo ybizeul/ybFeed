@@ -1,6 +1,6 @@
 import { useState, useEffect, useContext } from 'react'
 
-import { Group, Modal, Button, Text, Center, Card, Skeleton, Space } from "@mantine/core"
+import { Group, Button, Card, Skeleton, Space } from "@mantine/core"
 import { notifications } from '@mantine/notifications';
 import { IconPhoto, IconTrash, IconTxt, IconClipboardCopy, IconFile, IconDownload } from "@tabler/icons-react"
 
@@ -8,6 +8,7 @@ import { YBFeedItemTextComponent, YBFeedItemImageComponent, copyImageItem, FeedI
 import { Connector, YBFeedItem } from '../'
 
 import { defaultNotificationProps } from '../config';
+import { ConfirmPopoverButton } from './ConfirmPopoverButton';
 
 //const connection = new YBFeedConnector()
 
@@ -27,13 +28,6 @@ function YBHeadingComponent(props: FeedItemHeadingComponentProps) {
 
     if (item) {
         ({name,type} = item)
-    }
-
-    const [deleteModalOpen,setDeleteModalOpen] = useState(false)
-
-    // Display delete item confirmation dialog
-    function deleteItem() {
-        setDeleteModalOpen(true)
     }
 
     // Copy item to pasteboard
@@ -57,17 +51,6 @@ function YBHeadingComponent(props: FeedItemHeadingComponentProps) {
     return (
         <FeedItemContext.Provider value={item}>
             <Card.Section >
-                <Modal title="Delete" className="DeleteModal" 
-                    opened={deleteModalOpen} 
-                    onClose={() => setDeleteModalOpen(false)}>
-                    <Text>Do you really want to delete item "{name}"?</Text>
-                    <Center mt="1em">
-                        <Group align='right'>
-                            <Button size="xs" color="red" onClick={() => props.onDelete&&props.onDelete(item!)}>Delete</Button>
-                            <Button size="xs" onClick={() => setDeleteModalOpen(false)}>Cancel</Button>
-                        </Group>
-                    </Center>
-                </Modal>
                 <Group ml="1em" mr="1em"  mt="sm" justify="space-between">
                     <Group>
                         {(type === undefined)?
@@ -101,9 +84,12 @@ function YBHeadingComponent(props: FeedItemHeadingComponentProps) {
                             Copy
                         </Button>
         }
-                        <Button onClick={deleteItem} size="xs" leftSection={<IconTrash size={14} />} variant="light" color="red">
-                            Delete
-                        </Button>
+                        <ConfirmPopoverButton buttonTitle='Delete' message='Do you really want to delete item ?' onConfirm={() => props.onDelete&&props.onDelete(item!)}>
+                            <Button size="xs" leftSection={<IconTrash size={14} />} variant="light" color="red">
+                                Delete
+                            </Button>
+                        </ConfirmPopoverButton>
+                        
                         </>}
                     </Group>
                 </Group>

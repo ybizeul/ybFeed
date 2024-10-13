@@ -1,0 +1,9 @@
+.popover {
+    @mixin where-light {
+        background-color: var(--mantine-color-gray-1);
+    }
+
+    @mixin where-dark {
+        background-color: var(--mantine-color-gray-9);
+    }
+}
