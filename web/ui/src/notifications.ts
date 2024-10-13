@@ -17,27 +17,27 @@ export function Subscribe(vapid: string): Promise<PushSubscription> {
         }
 
         navigator.serviceWorker.getRegistration()
-            .then((registration) => {  
-                if (!registration) {
-                    return
+        .then((registration) => {  
+            if (!registration) {
+                return
+            }
+            registration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: urlBase64ToUint8Array(vapid),
+            }).then((subscription) => {
+                console.log(subscription)
+                if (!subscription) {
+                    reject(new Error("Unable to subscribe (empty subscription)"))
                 }
-                registration.pushManager.subscribe({
-                    userVisibleOnly: true,
-                    applicationServerKey: urlBase64ToUint8Array(vapid),
-                }).then(
-                    (subscription) => {
-                        if (!subscription) {
-                            reject(new Error("Unable to subscribe (empty subscription)"))
-                        }
-                        if (subscription.endpoint === "") {
-                            reject(new Error("Unable to subscribe (empty endpoint)"))
-                        }
-                        resolve(subscription)
-                    })
+                if (subscription.endpoint === "") {
+                    reject(new Error("Unable to subscribe (empty endpoint)"))
+                }
+                resolve(subscription)
             })
-            .catch((err) => {
-                reject(err)
-            });
+        })
+        .catch((err) => {
+            reject(err)
+        });
     })
 }
 

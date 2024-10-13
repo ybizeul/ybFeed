@@ -21,13 +21,15 @@ export function YBNotificationToggleComponent(props:NotificationToggleProps) {
     const [canPushNotifications, setCanPushNotification] = useState(false)
 
     useEffect(() => {
-        navigator.serviceWorker.getRegistration()
-        .then((registration) => {
-            if (! registration) {
-                return
-            }
-            setCanPushNotification(registration.pushManager !== undefined)
-        })
+        if ("serviceWorker" in navigator) {
+            navigator.serviceWorker.getRegistration()
+            .then((registration) => {
+                if (! registration) {
+                    return
+                }
+                setCanPushNotification(registration.pushManager !== undefined)
+            })
+        }
     },[])
 
     useEffect(() => {
