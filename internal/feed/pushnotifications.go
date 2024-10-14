@@ -23,12 +23,16 @@ func (f *Feed) sendPushNotification() error {
 	// For each subscription we send the notification
 	for _, subscription := range f.Config.Subscriptions {
 		pnL.Logger.Debug("Sending push notification", slog.String("endpoint", subscription.Endpoint))
-		resp, _ := webpush.SendNotification([]byte(fmt.Sprintf("New item posted to feed %s", f.Name())), &subscription, &webpush.Options{
+		resp, err := webpush.SendNotification([]byte(fmt.Sprintf("New item posted to feed %s", f.Name())), &subscription, &webpush.Options{
 			Subscriber:      "ybfeed@tynsoe.org", // Do not include "mailto:"
 			VAPIDPublicKey:  f.NotificationSettings.VAPIDPublicKey,
 			VAPIDPrivateKey: f.NotificationSettings.VAPIDPrivateKey,
 			TTL:             30,
 		})
+		if err != nil {
+			pnL.Logger.Error("Sending push notification failed:", slog.String("error", err.Error()))
+			continue
+		}
 		if pnL.Level() == slog.LevelDebug {
 			b, _ := io.ReadAll(resp.Body)
 			pnL.Logger.Debug("Response", slog.String("resp", string(b)), slog.String("status", resp.Status))
