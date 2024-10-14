@@ -1,0 +1,43 @@
+on:
+  push:
+    branches-ignore:
+      - main
+  
+jobs:
+  release:
+    name: release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      # Checkout code
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      # Fetch tags
+      - run: git fetch --force --tags
+      
+      # Set version environment
+      - name: Set VERSION
+        run: |
+          echo "YBFEED_VERSION=`git describe --tags`"  >> $GITHUB_ENV
+
+      # Build web ui
+      - name: Use Node.js 22.x
+        uses: actions/setup-node@v3
+        with:
+          node-version: 22.x
+      - run: corepack enable
+        working-directory: ./web/ui
+      - run: yarn
+        working-directory: ./web/ui
+      - run: yarn build
+        working-directory: ./web/ui
+
+      # Build docker image
+      - uses: ko-build/setup-ko@v0.6
+      - run: GOFLAGS="-ldflags=-X=main.version=$YBFEED_VERSION" ko build -B --platform all --tags dev --sbom none ./cmd/ybfeed
+        env:
+          KO_DOCKER_REPO: ghcr.io/ybizeul

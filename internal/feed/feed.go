@@ -250,11 +250,19 @@ func (feed *Feed) Empty() error {
 		return err
 	}
 	for _, item := range items {
-		err := feed.RemoveItem(item.Name)
+		err := feed.RemoveItem(item.Name, false)
 		if err != nil {
 			return err
 		}
 	}
+
+	// Notify all connected websockets
+	if feed.WebSocketManager != nil {
+		if err = feed.WebSocketManager.NotifyEmpty(feed); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -332,7 +340,7 @@ func (feed *Feed) IsSecretValid(secret string) error {
 
 // AddItem reads content from r and creates a new file in the feed directory
 // with a name and file extension based on contentType, then notifies clients
-func (f *Feed) AddItem(contentType string, r io.Reader) error {
+func (f *Feed) AddItem(contentType string, filename string, r io.Reader) error {
 	fL.Logger.Debug("Adding Item", slog.String("feed", f.Name()), slog.String("content-type", contentType))
 
 	var err error
@@ -347,7 +355,11 @@ func (f *Feed) AddItem(contentType string, r io.Reader) error {
 	// If the content-type isn't found, return an error
 	info, ok := mimeInfos[contentType]
 	if !ok {
-		return fmt.Errorf("%w: %s", FeedErrorInvalidContentType, contentType)
+		info = FileTypeInfo{
+			FileExtension:    path.Ext(filename)[1:],
+			FileNameTemplate: filename[:len(filename)-len(path.Ext(filename))],
+		}
+		//return fmt.Errorf("%w: %s", FeedErrorInvalidContentType, contentType)
 	}
 
 	// Obtain file extension and template for file name
@@ -371,10 +383,13 @@ func (f *Feed) AddItem(contentType string, r io.Reader) error {
 
 	// Search for existing content with identical file type to increment
 	// the index in file name
-	fileIndex := 1
-	var filename string
+	fileIndex := 0
 	for {
-		filename = fmt.Sprintf("%s %d", template, fileIndex)
+		fileIndexStr := ""
+		if fileIndex > 0 {
+			fileIndexStr = fmt.Sprintf(" %d", fileIndex)
+		}
+		filename = fmt.Sprintf("%s%s", template, fileIndexStr)
 		matches, err := filepath.Glob(path.Join(f.Path, filename) + ".*")
 		if err != nil {
 			return fmt.Errorf("%w: %s", FeedErrorErrorReading, filename)
@@ -420,7 +435,7 @@ func (f *Feed) AddItem(contentType string, r io.Reader) error {
 }
 
 // RemoveItem deletes item from the feed directory and notifies clients
-func (f *Feed) RemoveItem(item string) error {
+func (f *Feed) RemoveItem(item string, notify bool) error {
 	fL.Logger.Debug("Remove Item", slog.String("name", item), slog.String("feed", f.Path))
 
 	itemPath := path.Join(f.Path, path.Join("/", item))
@@ -441,7 +456,7 @@ func (f *Feed) RemoveItem(item string) error {
 	}
 
 	// Notify all connected websockets
-	if f.WebSocketManager != nil {
+	if f.WebSocketManager != nil && notify {
 		if err = f.WebSocketManager.NotifyRemove(publicItem); err != nil {
 			return err
 		}

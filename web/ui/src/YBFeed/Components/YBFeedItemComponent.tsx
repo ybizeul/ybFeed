@@ -1,20 +1,21 @@
 import { useState, useEffect, useContext } from 'react'
 
-import { Group, Modal, Button, Text, Center, Card, Skeleton } from "@mantine/core"
+import { Group, Button, Card, Skeleton, Space } from "@mantine/core"
 import { notifications } from '@mantine/notifications';
-import { IconPhoto, IconTrash, IconTxt, IconClipboardCopy } from "@tabler/icons-react"
+import { IconPhoto, IconTrash, IconTxt, IconClipboardCopy, IconFile, IconDownload } from "@tabler/icons-react"
 
 import { YBFeedItemTextComponent, YBFeedItemImageComponent, copyImageItem, FeedItemContext } from '.'
-import { YBFeedConnector, YBFeedError, YBFeedItem } from '../'
+import { Connector, YBFeedItem } from '../'
 
 import { defaultNotificationProps } from '../config';
+import { ConfirmPopoverButton } from './ConfirmPopoverButton';
 
-const connection = new YBFeedConnector()
+//const connection = new YBFeedConnector()
 
 // This is the heading component of a single item.
 // Its how the item type, name and the Copy and Delete buttons
 export interface FeedItemHeadingComponentProps {
-    onDelete?: () => void,
+    onDelete?: (item: YBFeedItem) => void,
     clipboardContent?: string,
 }
 
@@ -27,28 +28,6 @@ function YBHeadingComponent(props: FeedItemHeadingComponentProps) {
 
     if (item) {
         ({name,type} = item)
-    }
-
-    const [deleteModalOpen,setDeleteModalOpen] = useState(false)
-
-    // Display delete item confirmation dialog
-    function deleteItem() {
-        setDeleteModalOpen(true)
-    }
-
-    // Do the actual item deletion callback
-    function doDeleteItem() {
-        connection.DeleteItem(item!)
-        .then(() => {
-            setDeleteModalOpen(false)
-            if (props.onDelete) {
-                props.onDelete()
-            }
-        })
-        .catch((e: YBFeedError) => {
-            notifications.show({message: e.message, color: "red"})
-            setDeleteModalOpen(false)
-        })
     }
 
     // Copy item to pasteboard
@@ -72,28 +51,20 @@ function YBHeadingComponent(props: FeedItemHeadingComponentProps) {
     return (
         <FeedItemContext.Provider value={item}>
             <Card.Section >
-                <Modal title="Delete" className="DeleteModal" 
-                    opened={deleteModalOpen} 
-                    onClose={() => setDeleteModalOpen(false)}>
-                    <Text>Do you really want to delete item "{name}"?</Text>
-                    <Center mt="1em">
-                        <Group align='right'>
-                            <Button size="xs" color="red" onClick={doDeleteItem}>Delete</Button>
-                            <Button size="xs" onClick={() => setDeleteModalOpen(false)}>Cancel</Button>
-                        </Group>
-                    </Center>
-                </Modal>
-                <Group ml="1em" mr="1em" justify="space-between">
+                <Group ml="1em" mr="1em"  mt="sm" justify="space-between">
                     <Group>
                         {(type === undefined)?
                         <Skeleton width={20} height={20} />
                         :""}
-                        {(type === 0)?
+                        {(type === 0)&&
                         <IconTxt />
-                        :""}
-                        {(type === 1)?
+                        }
+                        {(type === 1)&&
                         <IconPhoto />
-                        :""}
+                        }
+                        {(type === 2)&&
+                        <IconFile />
+                        }
                         &nbsp;{name}
                     </Group>
                     <Group>
@@ -104,12 +75,21 @@ function YBHeadingComponent(props: FeedItemHeadingComponentProps) {
                         </>
                         :
                         <>
+                        {(type === 2)?
+                        <Button component="a" href={"/api/feeds/"+encodeURIComponent(item.feed.name)+"/items/"+item.name} size="xs" leftSection={<IconDownload size={14} />} variant="default" >
+                        Download
+                        </Button>
+                        :
                         <Button onClick={doCopyItem} size="xs" leftSection={<IconClipboardCopy size={14} />} variant="default" >
                             Copy
                         </Button>
-                        <Button onClick={deleteItem} size="xs" leftSection={<IconTrash size={14} />} variant="light" color="red">
-                            Delete
-                        </Button>
+        }
+                        <ConfirmPopoverButton buttonTitle='Delete' message='Do you really want to delete item ?' onConfirm={() => props.onDelete&&props.onDelete(item!)}>
+                            <Button size="xs" leftSection={<IconTrash size={14} />} variant="light" color="red">
+                                Delete
+                            </Button>
+                        </ConfirmPopoverButton>
+                        
                         </>}
                     </Group>
                 </Group>
@@ -120,51 +100,51 @@ function YBHeadingComponent(props: FeedItemHeadingComponentProps) {
 
 export interface YBFeedItemComponentProps {
     showCopyButton?: boolean
-    onUpdate?: (item: YBFeedItem) => void
-    onDelete?: () => void
+    onDelete?: (item: YBFeedItem) => void
 }
 
 export function YBFeedItemComponent(props: YBFeedItemComponentProps) {
     const item = useContext(FeedItemContext)
 
     const [textContent,setTextContent] = useState<string|undefined>(undefined)
-    const [timedOut, setTimedOut] = useState(false)
+    // const [timedOut, setTimedOut] = useState(false)
 
-    useEffect(()=> {
-        window.setTimeout(() => setTimedOut(true),1000)
-    })
+    // useEffect(()=> {
+    //     window.setTimeout(() => setTimedOut(true),1000)
+    // })
     
     useEffect(() => {
         if (item && item!.type === 0) {
-            const connection = new YBFeedConnector()
-            connection.GetItem(item!)
+            Connector.GetItem(item!)
             .then((text) => {
                 setTextContent(text)
             })     
         }
     })
 
+    if (! item) {
+        return(
+        <Card mt="2em" withBorder shadow="sm" radius="md" mb="2em">
+            <YBHeadingComponent onDelete={props.onDelete} clipboardContent={textContent}/>
+            <Skeleton mt="2em" height={50}/>
+        </Card>
+        )
+    }
+    
     return(
-        <>
-        {!item?
-            timedOut?
-            <Card mt="2em" withBorder shadow="sm" radius="md" mb="2em">
-                <YBHeadingComponent onDelete={props.onDelete} clipboardContent={textContent}/>
-                <Skeleton mt="2em" height={50}/>
-            </Card>
-            :
-            ""
-        :
         <Card withBorder shadow="sm" radius="md" mb="2em">
             <YBHeadingComponent onDelete={props.onDelete} clipboardContent={textContent}/>
-            {(item.type===0)?
+            {(item.type===0)&&
             <YBFeedItemTextComponent>
                 {textContent}
             </YBFeedItemTextComponent>
-            :
+            }
+            {(item.type===1)&&
             <YBFeedItemImageComponent/>
             }
-        </Card>}
-        </>
+            {(item.type===2)&&
+            <Space/>
+            }
+        </Card>
     )
 }

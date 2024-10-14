@@ -11,11 +11,11 @@ export class YBFeedError extends Error {
 export class YBFeed {
     name: string;
     secret: string|undefined;
-    items: YBFeedItem[]|undefined;
+    items: YBFeedItem[];
     vapidpublickey: string|undefined;
     constructor(name: string) {
         this.name = name
-        this.items = undefined
+        this.items = []
     }
     webSocketUrl(): string {
         const path = window.location.origin + "/ws/" + self.name

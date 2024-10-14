@@ -17,7 +17,7 @@ func TestGetFeedItemData(t *testing.T) {
 
 	reader := bytes.NewReader([]byte("test"))
 
-	err = f.AddItem("text/plain", reader)
+	err = f.AddItem("text/plain", "", reader)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -70,7 +70,7 @@ func TestPathTraversalDelete(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = f.RemoveItem("../feed1/config.json")
+	err = f.RemoveItem("../feed1/config.json", true)
 
 	if err == nil {
 		t.Fatal("Path traversal not blocked")
@@ -110,7 +110,7 @@ func TestPublicItem(t *testing.T) {
 
 	reader := bytes.NewReader([]byte("test"))
 
-	err = f.AddItem("text/plain", reader)
+	err = f.AddItem("text/plain", "", reader)
 	if err != nil {
 		t.Fatal(err)
 	}

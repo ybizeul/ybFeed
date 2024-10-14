@@ -25,14 +25,17 @@ jobs:
           echo "YBFEED_VERSION=`git describe --tags`"  >> $GITHUB_ENV
 
       # Build web ui
-      - name: Use Node.js 20.x
+      - name: Use Node.js 22.x
         uses: actions/setup-node@v3
         with:
-          node-version: 20.x
-      - run: npm install
+          node-version: 22.x
+      - run: corepack enable
         working-directory: ./web/ui
-      - run: npm run build
+      - run: yarn
         working-directory: ./web/ui
+      - run: yarn build
+        working-directory: ./web/ui
+
 
       # Build go binary
       - uses: actions/setup-go@v4

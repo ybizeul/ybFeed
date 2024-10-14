@@ -7,12 +7,16 @@ export function YBFeedVersionComponent() {
             fetch("/api")
             .then(r => {
                 const v = r.headers.get("Ybfeed-Version")
-                if (v !== null) {
+                if (v !== null && v !== "") {
                     setVersion(v)
+                } else {
+                    setVersion("Unknown")
                 }
             })
-        })
-        //const pinned = useHeadroom({ fixedAt: 120 });
+            .catch(e => {
+                console.log(e)
+            })
+        },[])
         return (
             <>
             {!version?

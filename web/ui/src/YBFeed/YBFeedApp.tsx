@@ -15,15 +15,14 @@ const router = createBrowserRouter([
         element:<YBFeedHome/>
     },
     {
-        path: "/:feed",
+        path: "/:feedName",
         element:<YBFeedFeed/>
     },
 ])
 
-
 export function YBFeedApp() {
     return (
-        <AppShell withBorder={false} >
+        <AppShell withBorder={false}>
             <AppShell.Main>
                 <Container size="md" mx="auto">
                     <RouterProvider router={router} />

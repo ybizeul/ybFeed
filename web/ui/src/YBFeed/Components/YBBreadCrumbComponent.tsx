@@ -1,4 +1,5 @@
 import { Breadcrumbs, Anchor } from '@mantine/core';
+import { Link } from 'react-router-dom';
 
 export function YBBreadCrumbComponent() {
   const p = window.location.pathname.split("/")
@@ -18,7 +19,7 @@ export function YBBreadCrumbComponent() {
 
   const items = crumbItems.map((item,index) =>
     (item.href === "")?item.title:
-      <Anchor href={item.href} key={index}>
+      <Anchor component={Link} to={item.href} key={index}>
         {item.title}
       </Anchor>
   )

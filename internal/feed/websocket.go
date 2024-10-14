@@ -191,3 +191,22 @@ func (m *WebSocketManager) NotifyRemove(item *PublicFeedItem) error {
 	}
 	return nil
 }
+
+func (m *WebSocketManager) NotifyEmpty(feed *Feed) error {
+	wsL.Logger.Debug("Notify websocket empty",
+		slog.Int("ws count", len(m.FeedSockets)))
+	for _, f := range m.FeedSockets {
+		wsL.Logger.Debug("checking feed", slog.String("feedName", f.feedName))
+		if f.feedName == feed.Name() {
+			wsL.Logger.Debug("found feed", slog.String("feedName", f.feedName))
+			for _, w := range f.websockets {
+				if err := w.WriteJSON(FeedNotification{
+					Action: "empty",
+				}); err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
+}
