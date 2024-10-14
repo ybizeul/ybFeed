@@ -34,7 +34,7 @@ var webUiHandler = http.FileServer(http.FS(ui.GetUiFs()))
 // then it serves this file from webUiHandler, otherwise it returns
 // index.html for proper react routing
 func RootHandlerFunc(w http.ResponseWriter, r *http.Request) {
-	hL.Logger.Debug("Root request", slog.Any("request_uri", r.RequestURI))
+	hL.Logger.Debug("Root request", slog.String("request_uri", r.RequestURI))
 
 	p := r.URL.Path
 
@@ -248,7 +248,7 @@ func (api *ApiHandler) feedWSHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (api *ApiHandler) feedGetFunc(w http.ResponseWriter, r *http.Request) {
-	hL.Logger.Debug("Feed API request", slog.Any("request_uri", r.RequestURI))
+	hL.Logger.Debug("Feed API request", slog.String("request_uri", r.RequestURI))
 
 	feedName, _ := url.QueryUnescape(chi.URLParam(r, "feedName"))
 
@@ -313,7 +313,7 @@ func (api *ApiHandler) feedGetFunc(w http.ResponseWriter, r *http.Request) {
 }
 
 func (api *ApiHandler) feedPatchFunc(w http.ResponseWriter, r *http.Request) {
-	hL.Logger.Debug("Feed API Set PIN request", slog.Any("request", r))
+	hL.Logger.Debug("Feed API Set PIN request", slog.String("request_uri", r.RequestURI))
 	secret, _ := utils.GetSecret(r)
 
 	feedName, _ := url.QueryUnescape(chi.URLParam(r, "feedName"))
@@ -353,7 +353,7 @@ func (api *ApiHandler) feedPatchFunc(w http.ResponseWriter, r *http.Request) {
 	}
 }
 func (api *ApiHandler) itemsDeleteFunc(w http.ResponseWriter, r *http.Request) {
-	hL.Logger.Debug("Item API EMPTY request", slog.Any("request", r))
+	hL.Logger.Debug("Item API EMPTY request", slog.String("request_uri", r.RequestURI))
 
 	secret, _ := utils.GetSecret(r)
 
@@ -383,7 +383,7 @@ func (api *ApiHandler) itemsDeleteFunc(w http.ResponseWriter, r *http.Request) {
 }
 
 func (api *ApiHandler) itemGetFunc(w http.ResponseWriter, r *http.Request) {
-	hL.Logger.Debug("Item API GET request", slog.Any("request", r))
+	hL.Logger.Debug("Item API GET request", slog.String("request_uri", r.RequestURI))
 
 	secret, _ := utils.GetSecret(r)
 
@@ -429,7 +429,7 @@ func (api *ApiHandler) itemGetFunc(w http.ResponseWriter, r *http.Request) {
 }
 
 func (api *ApiHandler) feedPostFunc(w http.ResponseWriter, r *http.Request) {
-	hL.Logger.Debug("Item API POST request", slog.Any("request", r))
+	hL.Logger.Debug("Item API POST request", slog.String("request_uri", r.RequestURI))
 
 	secret, _ := utils.GetSecret(r)
 
@@ -486,7 +486,7 @@ func (api *ApiHandler) feedPostFunc(w http.ResponseWriter, r *http.Request) {
 }
 
 func (api *ApiHandler) itemDeleteFunc(w http.ResponseWriter, r *http.Request) {
-	hL.Logger.Debug("Item API DELETE request", slog.Any("request", r))
+	hL.Logger.Debug("Item API DELETE request", slog.String("request_uri", r.RequestURI))
 
 	secret, _ := utils.GetSecret(r)
 
@@ -532,7 +532,7 @@ func (api *ApiHandler) itemDeleteFunc(w http.ResponseWriter, r *http.Request) {
 
 func (api *ApiHandler) subscriptionPostFunc(w http.ResponseWriter, r *http.Request) {
 
-	hL.Logger.Debug("Feed subscription request", slog.Any("request", r))
+	hL.Logger.Debug("Feed subscription request", slog.String("request_uri", r.RequestURI))
 
 	secret, _ := utils.GetSecret(r)
 
@@ -574,7 +574,7 @@ func (api *ApiHandler) subscriptionPostFunc(w http.ResponseWriter, r *http.Reque
 
 func (api *ApiHandler) subscriptionDeleteFunc(w http.ResponseWriter, r *http.Request) {
 
-	hL.Logger.Debug("Feed subscription request", slog.Any("request", r))
+	hL.Logger.Debug("Feed subscription request", slog.String("request_uri", r.RequestURI))
 
 	secret, _ := utils.GetSecret(r)
 
