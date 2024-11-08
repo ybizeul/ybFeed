@@ -14,7 +14,7 @@ be kept in sync when you add or remove items.
 On ybFeed home page, you are invited to create a feed with a unique name.
 
 Once on a feed, you can paste data in it, text or images, they will be
-displayed in reverse order.
+displayed with the newest items at the top.
 
 You can then decide to share the feed two different ways :
 
@@ -52,6 +52,7 @@ the filesystem
 | `YBF_DATA_DIR` | points to an alternative direcotry to store data, default is `./data/` in current directory. |
 | `YBF_HTTP_PORT` | TCP port to run the server, default is `8080`. |
 | `YBF_LISTEN_ADDR` | IP address to bind, default is `0.0.0.0`. |
+| ` YBF_MAX_UPLOAD_SIZE` | Maximum size for added items an files, default is 5MB. |
 
 ### Installation
 
