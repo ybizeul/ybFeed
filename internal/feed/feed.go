@@ -355,15 +355,26 @@ func (f *Feed) AddItem(contentType string, filename string, r io.Reader) error {
 	// If the content-type isn't found, return an error
 	info, ok := mimeInfos[contentType]
 	if !ok {
-		info = FileTypeInfo{
-			FileExtension:    path.Ext(filename)[1:],
-			FileNameTemplate: filename[:len(filename)-len(path.Ext(filename))],
+		if path.Ext(filename) != "" {
+			info = FileTypeInfo{
+				FileExtension:    path.Ext(filename)[1:],
+				FileNameTemplate: filename[:len(filename)-len(path.Ext(filename))],
+			}
+		} else {
+			info = FileTypeInfo{
+				FileExtension:    "",
+				FileNameTemplate: filename,
+			}
 		}
 		//return fmt.Errorf("%w: %s", FeedErrorInvalidContentType, contentType)
 	}
 
 	// Obtain file extension and template for file name
-	ext := info.FileExtension
+	ext := ""
+
+	if info.FileExtension != "" {
+		ext = "." + info.FileExtension
+	}
 	template := info.FileNameTemplate
 
 	// Read content
@@ -390,7 +401,8 @@ func (f *Feed) AddItem(contentType string, filename string, r io.Reader) error {
 			fileIndexStr = fmt.Sprintf(" %d", fileIndex)
 		}
 		filename = fmt.Sprintf("%s%s", template, fileIndexStr)
-		matches, err := filepath.Glob(path.Join(f.Path, filename) + ".*")
+		matches, err := filepath.Glob(path.Join(f.Path, filename) + "*")
+
 		if err != nil {
 			return fmt.Errorf("%w: %s", FeedErrorErrorReading, filename)
 		}
@@ -401,7 +413,7 @@ func (f *Feed) AddItem(contentType string, filename string, r io.Reader) error {
 	}
 
 	// Assign full file path
-	filePath := path.Join(f.Path, filename+"."+ext)
+	filePath := path.Join(f.Path, filename+ext)
 
 	// Write content to file
 	err = os.WriteFile(filePath, content, 0600)
@@ -410,7 +422,7 @@ func (f *Feed) AddItem(contentType string, filename string, r io.Reader) error {
 	}
 
 	// Get PublicItem for the added content
-	publicItem, err := f.GetPublicItem(filename + "." + ext)
+	publicItem, err := f.GetPublicItem(filename + ext)
 
 	if err != nil {
 		return err
