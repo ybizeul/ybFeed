@@ -189,6 +189,7 @@ func (api *ApiHandler) GetServer() *chi.Mux {
 	})
 
 	r.Post("/api/secrets", api.postSecretsHandler)
+	r.Get("/api/infos", api.getInfosHandler)
 	r.Route("/api/feeds", func(r chi.Router) {
 		r.Get("/{feedName}", api.feedGetFunc)
 		r.Post("/{feedName}", api.feedPostFunc)
@@ -209,6 +210,18 @@ func (api *ApiHandler) GetServer() *chi.Mux {
 		slog.Int("max-upload-size", api.MaxBodySize))
 
 	return r
+}
+
+func (api *ApiHandler) getInfosHandler(w http.ResponseWriter, r *http.Request) {
+	result := struct {
+		Version     string `json:"version"`
+		MaxBodySize int    `json:"maxBodySize"`
+	}{
+		Version:     api.Version,
+		MaxBodySize: api.MaxBodySize,
+	}
+
+	_ = json.NewEncoder(w).Encode(result)
 }
 
 func (api *ApiHandler) feedWSHandler(w http.ResponseWriter, r *http.Request) {
