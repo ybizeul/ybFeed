@@ -10,74 +10,28 @@ import './YBPasteCardComponent.css'
 import { PasteToFeed } from '../../paste';
 import { Y } from '../../YBFeedClient';
 
+interface ServerInfo {
+    maxBodySize: number
+}
 export function YBPasteCardComponent() {
     const [isMobile, setIsMobile] = useState(false)
+    const [maxSize, setMaxSize] = useState(5*1024**2)
+
     const {feedName} = useParams()
 
     if (!feedName) {
         redirect("/")
         return
     }
-    // const form = useForm({
-    //     initialValues: {
-    //       text: '',
-    //     },
-    // })
 
-    // //
-    // // Pasting Data
-    // //
-    
-    // const handleOnPaste = (event: React.ClipboardEvent) => {
-    //     const items = event.clipboardData.items
-    //     let data, type
-    //     form.setFieldValue("text","")
-    //     for (let i=0; i<items.length;i++) {
-    //         if (items[i].type.indexOf("image") === 0 && items[i].kind === "file") {
-    //             type = items[i].type
-    //             data = items[i].getAsFile()
-    //             break
-    //         }
-    //         else if (items[i].type === "text/plain") {
-    //             type = items[i].type
-    //             data = event.clipboardData.getData('text')
-    //             break
-    //         }
-    //     }
-
-    //     if (type === undefined) {
-    //         return
-    //     }
-
-    //     const requestHeaders: HeadersInit = new Headers();
-    //     requestHeaders.set("Content-Type", type)
-    //     fetch("/api/feeds/" + encodeURIComponent(feed!),{
-    //         method: "POST",
-    //         body: data,
-    //         headers: requestHeaders,
-    //         credentials: "include"
-    //       })
-    //       .then(() => {
-    //         form.setFieldValue("text","")
-    //         if (props.onPaste) {
-    //             props.onPaste()
-    //         }
-    //       })
-    // }
-
-    // const handleFinish = (text:string) => {
-    //     const requestHeaders: HeadersInit = new Headers();
-    //     requestHeaders.set("Content-Type", "text/plain")
-    //     fetch("/api/feeds/" + encodeURIComponent(feed!),{
-    //         method: "POST",
-    //         body: text,
-    //         headers: requestHeaders,
-    //         credentials: "include"
-    //       })
-    //       .then(() => {
-    //         form.setFieldValue("text","")
-    //     })
-    // }
+    useEffect(() => {
+        Y.get("/infos").then(r => {
+            const i = r as ServerInfo
+            setMaxSize(i.maxBodySize)
+        }).catch(e => {
+            console.log(e)
+        })
+    })
 
     useEffect(() => {
         const handleResize = () => {
@@ -117,7 +71,7 @@ export function YBPasteCardComponent() {
                     Y.post("/feeds/" + encodeURIComponent(feedName), formData)
                 }}
                 onReject={(files) => console.log('rejected files', files)}
-                maxSize={5 * 1024 ** 2}
+                maxSize={maxSize}
                 ><Center h={"100vh"}>
                     Drop files here
                     </Center>
