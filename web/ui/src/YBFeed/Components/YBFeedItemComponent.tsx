@@ -63,8 +63,8 @@ function YBHeadingComponent(props: FeedItemHeadingComponentProps) {
     return (
         <FeedItemContext.Provider value={item}>
             <Card.Section >
-                <Group ml="1em" mr="1em"  mt="sm" justify="space-between">
-                    <Group>
+                <Group ml="1em" mr="1em"  mt="sm" justify="center" wrap="wrap">
+                    <Group style={{ flex: 1 }} wrap='nowrap' gap="xs">
                         {(type === undefined)?
                         <Skeleton width={20} height={20} />
                         :""}
@@ -77,9 +77,9 @@ function YBHeadingComponent(props: FeedItemHeadingComponentProps) {
                         {(type === 2)&&
                         <IconFile />
                         }
-                        &nbsp;{name}
+                        <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</span>
                     </Group>
-                    <Group>
+                    <Group justify="center">
                         {(type === 0 && activeLanguage) &&
                         <Group gap="xs">
                             <Menu shadow="md" width={200}>
