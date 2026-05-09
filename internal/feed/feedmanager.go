@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"path"
+
+	"golang.org/x/exp/slog"
 )
 
 // FeedManager is the main interface tu feeds and contains the path to ybFeed
@@ -65,7 +67,7 @@ func (m *FeedManager) GetFeedWithAuth(feedName string, secret string) (*Feed, er
 func (m *FeedManager) DumpSecrets() {
 	d, err := os.ReadDir(m.path)
 	if err != nil {
-		// TODO: log error
+		slog.Error("DumpSecrets: unable to read data directory", slog.String("path", m.path), slog.String("error", err.Error()))
 		return
 	}
 	for _, entry := range d {
@@ -76,8 +78,8 @@ func (m *FeedManager) DumpSecrets() {
 
 		result, err := GetFeed(feedPath)
 		if err != nil {
-			// TODO Log error
-			return
+			slog.Error("DumpSecrets: unable to get feed", slog.String("feed", entry.Name()), slog.String("error", err.Error()))
+			continue
 		}
 		fmt.Printf("Feed %s: %s\n", result.Name(), result.Config.Secret)
 	}

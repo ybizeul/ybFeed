@@ -625,4 +625,5 @@ func (api *ApiHandler) subscriptionDeleteFunc(w http.ResponseWriter, r *http.Req
 
 func (api *ApiHandler) postSecretsHandler(w http.ResponseWriter, r *http.Request) {
 	api.FeedManager.DumpSecrets()
+	w.WriteHeader(http.StatusOK)
 }
