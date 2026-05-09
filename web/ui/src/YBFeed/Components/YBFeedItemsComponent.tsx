@@ -14,12 +14,14 @@ export interface YBFeedItemsComponentProps {
 }
 
 export function YBFeedItemsComponent(props: YBFeedItemsComponentProps) {
-    const { feedName, secret } = props
+    const { feedName, secret, setEmpty } = props
 
     const navigate = useNavigate()
     const [feedItems, setFeedItems] = useState<YBFeedItem[]>([])
-    // Setup websocket to receive feed events
     const ws = useRef<WebSocket|null>(null)
+    const pollingInterval = useRef<number|undefined>(undefined)
+    const wsRecoveryInterval = useRef<number|undefined>(undefined)
+    const unmounted = useRef(false)
 
     // Do the actual item deletion callback
     const deleteItem = (item: YBFeedItem) => {
@@ -27,99 +29,196 @@ export function YBFeedItemsComponent(props: YBFeedItemsComponentProps) {
     }
 
     const removeItem = (item: YBFeedItem) => {
-        const newI = feedItems.filter((i) => i.name !== item.name)
-        setFeedItems(newI)
-        props.setEmpty && props.setEmpty(newI.length === 0)
-        props.setEmpty && props.setEmpty(newI.length === 0)
+        setFeedItems((items) => {
+            const newItems = items.filter((i) => i.name !== item.name)
+            setEmpty && setEmpty(newItems.length === 0)
+            return newItems
+        })
     }
 
     const addItem = (item: YBFeedItem) => {
-        setFeedItems((items) => [item].concat(items))
-        props.setEmpty && props.setEmpty(false)
+        setFeedItems((items) => {
+            const withoutItem = items.filter((i) => i.name !== item.name)
+            return [item].concat(withoutItem)
+        })
+        setEmpty && setEmpty(false)
     }
 
     useEffect(() => {
+        unmounted.current = false
+
+        if (!secret) {
+            return
+        }
+
         const webSocketURL = window.location.protocol.replace("http","ws") + "//" + window.location.host + "/ws/" + feedName + "?secret=" + secret
+        const pollingDelayMs = 5000
+        const wsRecoveryDelayMs = 30000
+
+        const clearPolling = () => {
+            if (pollingInterval.current !== undefined) {
+                window.clearInterval(pollingInterval.current)
+                pollingInterval.current = undefined
+            }
+        }
+
+        const clearWsRecovery = () => {
+            if (wsRecoveryInterval.current !== undefined) {
+                window.clearInterval(wsRecoveryInterval.current)
+                wsRecoveryInterval.current = undefined
+            }
+        }
+
+        const applyFeedSnapshot = (feed: YBFeed) => {
+            setFeedItems(feed.items)
+            setEmpty && setEmpty(feed.items.length === 0)
+        }
+
+        const startPolling = () => {
+            if (pollingInterval.current !== undefined || unmounted.current) {
+                return
+            }
+
+            const poll = () => {
+                Connector.GetFeed(feedName)
+                .then((f) => {
+                    if (!f || unmounted.current) {
+                        return
+                    }
+                    applyFeedSnapshot(f)
+                })
+                .catch(() => {
+                    // Keep polling until websocket recovers.
+                })
+            }
+
+            poll()
+            pollingInterval.current = window.setInterval(poll, pollingDelayMs)
+        }
+
+        const startWsRecovery = (connect: () => void) => {
+            if (wsRecoveryInterval.current !== undefined || unmounted.current) {
+                return
+            }
+
+            wsRecoveryInterval.current = window.setInterval(() => {
+                connect()
+            }, wsRecoveryDelayMs)
+        }
 
         function disconnect() {
             if (ws.current === null) {
                 return
             }
+            ws.current.onclose = null
+            ws.current.onmessage = null
+            ws.current.onerror = null
             ws.current.close()
             ws.current = null
         }
 
         function connect() {
-            disconnect()
-            ws.current = new WebSocket(webSocketURL)
-            if (ws.current === null) {
+            if (unmounted.current) {
                 return
             }
-            ws.current.onopen = () => {
-                console.log("websocket connected")
-                ws.current?.send("feed")
+
+            if (ws.current && (ws.current.readyState === WebSocket.OPEN || ws.current.readyState === WebSocket.CONNECTING)) {
+                return
             }
 
-            ws.current.onclose = (e) => {
-                console.log("websocket closed : ",e)
+            disconnect()
+
+            const socket = new WebSocket(webSocketURL)
+            ws.current = socket
+
+            socket.onopen = () => {
+                if (ws.current !== socket || unmounted.current) {
+                    return
+                }
+                clearPolling()
+                clearWsRecovery()
+                socket.send("feed")
+            }
+
+            socket.onmessage = (m:WebSocketEventMap["message"]) => {
+                if (ws.current !== socket || unmounted.current) {
+                    return
+                }
+
+                let messageData: unknown
+                try {
+                    messageData = JSON.parse(m.data)
+                } catch {
+                    return
+                }
+
+                if (!messageData) {
+                    return
+                }
+
+                if (Object.prototype.hasOwnProperty.call(messageData, "items")) {
+                    applyFeedSnapshot(messageData as YBFeed)
+                    return
+                }
+
+                if (Object.prototype.hasOwnProperty.call(messageData, "action")) {
+                    interface ActionMessage {
+                        action: string,
+                        item?: YBFeedItem
+                    }
+                    const actionMessage = (messageData as ActionMessage)
+                    if (actionMessage.action === "remove" && actionMessage.item) {
+                        removeItem(actionMessage.item)
+                    } else if (actionMessage.action === "add" && actionMessage.item) {
+                        addItem(actionMessage.item)
+                    } else if (actionMessage.action === "empty") {
+                        setFeedItems([])
+                        setEmpty && setEmpty(true)
+                    }
+                }
+            }
+
+            socket.onerror = () => {
+                if (ws.current !== socket || unmounted.current) {
+                    return
+                }
+
+                startPolling()
+                startWsRecovery(connect)
+            }
+
+            socket.onclose = (e) => {
+                if (ws.current === socket) {
+                    ws.current = null
+                }
+
+                if (unmounted.current) {
+                    return
+                }
 
                 if (e.code > 4000) {
                     navigate("/")
                     return
                 }
-                // Try to reconnect
-                setTimeout(() => {
-                    console.log("reconnecting")
-                    connect()
-                },1000)
+
+                startPolling()
+                startWsRecovery(connect)
+            }
+
+            if (ws.current === null) {
+                return
             }
         }
 
         connect()
 
         return () => {
-            const w=ws.current
-            if (!w) {
-                console.log("no websocket to close")
-                return
-            }
-            console.log("closing websocket")
-            w.onclose = null
-            w.close()
+            unmounted.current = true
+            clearPolling()
+            clearWsRecovery()
+            disconnect()
         }
-    },[])
-
-    useEffect(() => {
-        if (!ws.current) {
-            return
-        }
-
-        ws.current.onmessage = (m:WebSocketEventMap["message"]) => {
-            const message_data = JSON.parse(m.data)
-            if (message_data) {
-                if (Object.prototype.hasOwnProperty.call(message_data, "items")) {
-                    const f = (message_data as YBFeed)
-                    setFeedItems(f.items)
-                    props.setEmpty && props.setEmpty(f.items.length === 0)
-                }
-                if (Object.prototype.hasOwnProperty.call(message_data, "action")) {
-                    interface ActionMessage {
-                        action: string,
-                        item: YBFeedItem
-                    }
-                    const am = (message_data as ActionMessage)
-                    if (am.action === "remove") {
-                        removeItem(am.item)
-                    } else if (am.action === "add") {
-                        addItem(am.item)
-                    } else if (am.action === "empty") {
-                        setFeedItems([])
-                        props.setEmpty && props.setEmpty(true)
-                    }
-                }
-            }
-        }
-    },[feedItems])
+    },[feedName, navigate, secret, setEmpty])
 
     return(
         <>
