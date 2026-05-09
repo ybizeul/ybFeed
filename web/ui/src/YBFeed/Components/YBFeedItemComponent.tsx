@@ -1,6 +1,7 @@
 import { useState, useEffect, useContext, useCallback } from 'react'
 
-import { Group, Button, Card, Skeleton, Space, Switch, Menu, ScrollArea } from "@mantine/core"
+import { Group, Button, ActionIcon, Card, Skeleton, Space, Switch, Menu, ScrollArea } from "@mantine/core"
+import { useMediaQuery } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications';
 import { IconPhoto, IconTrash, IconTxt, IconClipboardCopy, IconFile, IconDownload, IconChevronDown } from "@tabler/icons-react"
 import hljs from 'highlight.js'
@@ -29,6 +30,7 @@ export interface FeedItemHeadingComponentProps {
 
 function YBHeadingComponent(props: FeedItemHeadingComponentProps) {
     const item = useContext(FeedItemContext)
+    const isMobile = useMediaQuery('(max-width: 600px)')
     
     const { clipboardContent, detectedLanguage, manualLanguage, highlightEnabled, onHighlightToggle, onLanguageChange } = props
 
@@ -122,18 +124,34 @@ function YBHeadingComponent(props: FeedItemHeadingComponentProps) {
                         :
                         <>
                         {(type === 2)?
+                        isMobile ?
+                        <ActionIcon component="a" href={"/api/feeds/"+encodeURIComponent(item.feed.name)+"/items/"+item.name} size="sm" variant="default" aria-label="Download">
+                            <IconDownload size={14} />
+                        </ActionIcon>
+                        :
                         <Button component="a" href={"/api/feeds/"+encodeURIComponent(item.feed.name)+"/items/"+item.name} size="xs" leftSection={<IconDownload size={14} />} variant="default" >
                         Download
                         </Button>
+                        :
+                        isMobile ?
+                        <ActionIcon onClick={doCopyItem} size="sm" variant="default" aria-label="Copy">
+                            <IconClipboardCopy size={14} />
+                        </ActionIcon>
                         :
                         <Button onClick={doCopyItem} size="xs" leftSection={<IconClipboardCopy size={14} />} variant="default" >
                             Copy
                         </Button>
         }
                         <ConfirmPopoverButton buttonTitle='Delete' message='Do you really want to delete item ?' onConfirm={() => props.onDelete&&props.onDelete(item!)}>
+                            {isMobile ?
+                            <ActionIcon size="sm" variant="light" color="red" aria-label="Delete">
+                                <IconTrash size={14} />
+                            </ActionIcon>
+                            :
                             <Button size="xs" leftSection={<IconTrash size={14} />} variant="light" color="red">
                                 Delete
                             </Button>
+                            }
                         </ConfirmPopoverButton>
                         
                         </>}
