@@ -1,14 +1,17 @@
-import { useState, useEffect, useContext } from 'react'
+import { useState, useEffect, useContext, useCallback } from 'react'
 
-import { Group, Button, Card, Skeleton, Space } from "@mantine/core"
+import { Group, Button, Card, Skeleton, Space, Switch, Menu, ScrollArea } from "@mantine/core"
 import { notifications } from '@mantine/notifications';
-import { IconPhoto, IconTrash, IconTxt, IconClipboardCopy, IconFile, IconDownload } from "@tabler/icons-react"
+import { IconPhoto, IconTrash, IconTxt, IconClipboardCopy, IconFile, IconDownload, IconChevronDown } from "@tabler/icons-react"
+import hljs from 'highlight.js'
 
 import { YBFeedItemTextComponent, YBFeedItemImageComponent, copyImageItem, FeedItemContext } from '.'
 import { Connector, YBFeedItem } from '../'
 
 import { defaultNotificationProps } from '../config';
 import { ConfirmPopoverButton } from './ConfirmPopoverButton';
+
+const allLanguages = hljs.listLanguages().sort()
 
 //const connection = new YBFeedConnector()
 
@@ -17,12 +20,19 @@ import { ConfirmPopoverButton } from './ConfirmPopoverButton';
 export interface FeedItemHeadingComponentProps {
     onDelete?: (item: YBFeedItem) => void,
     clipboardContent?: string,
+    detectedLanguage?: string | null,
+    manualLanguage?: string | null,
+    highlightEnabled?: boolean,
+    onHighlightToggle?: (enabled: boolean) => void,
+    onLanguageChange?: (lang: string | null) => void,
 }
 
 function YBHeadingComponent(props: FeedItemHeadingComponentProps) {
     const item = useContext(FeedItemContext)
     
-    const { clipboardContent } = props
+    const { clipboardContent, detectedLanguage, manualLanguage, highlightEnabled, onHighlightToggle, onLanguageChange } = props
+
+    const activeLanguage = manualLanguage ?? detectedLanguage
 
     let name, type = undefined
 
@@ -68,6 +78,42 @@ function YBHeadingComponent(props: FeedItemHeadingComponentProps) {
                         &nbsp;{name}
                     </Group>
                     <Group>
+                        {(type === 0 && activeLanguage) &&
+                        <Group gap="xs">
+                            <Menu shadow="md" width={200}>
+                                <Menu.Target>
+                                    <Button size="xs" variant="subtle" rightSection={<IconChevronDown size={12} />}>
+                                        {activeLanguage}
+                                    </Button>
+                                </Menu.Target>
+                                <Menu.Dropdown>
+                                    <ScrollArea h={200}>
+                                        <Menu.Item
+                                            onClick={() => onLanguageChange?.(null)}
+                                            fw={!manualLanguage ? 700 : undefined}
+                                        >
+                                            Auto ({detectedLanguage ?? 'none'})
+                                        </Menu.Item>
+                                        <Menu.Divider />
+                                        {allLanguages.map(lang => (
+                                            <Menu.Item
+                                                key={lang}
+                                                onClick={() => onLanguageChange?.(lang)}
+                                                fw={lang === manualLanguage ? 700 : undefined}
+                                            >
+                                                {lang}
+                                            </Menu.Item>
+                                        ))}
+                                    </ScrollArea>
+                                </Menu.Dropdown>
+                            </Menu>
+                            <Switch
+                                size="xs"
+                                checked={highlightEnabled ?? true}
+                                onChange={(e) => onHighlightToggle?.(e.currentTarget.checked)}
+                            />
+                        </Group>
+                        }
                         {item===undefined?
                         <>
                         <Skeleton width={80} height={20} mr="1em"/>
@@ -107,6 +153,9 @@ export function YBFeedItemComponent(props: YBFeedItemComponentProps) {
     const item = useContext(FeedItemContext)
 
     const [textContent,setTextContent] = useState<string|undefined>(undefined)
+    const [detectedLanguage, setDetectedLanguage] = useState<string | null>(null)
+    const [manualLanguage, setManualLanguage] = useState<string | null>(null)
+    const [highlightEnabled, setHighlightEnabled] = useState(true)
     // const [timedOut, setTimedOut] = useState(false)
 
     // useEffect(()=> {
@@ -122,6 +171,10 @@ export function YBFeedItemComponent(props: YBFeedItemComponentProps) {
         }
     })
 
+    const handleLanguageDetected = useCallback((lang: string | null) => {
+        setDetectedLanguage(lang)
+    }, [])
+
     if (! item) {
         return(
         <Card mt="2em" withBorder shadow="sm" radius="md" mb="2em">
@@ -133,9 +186,17 @@ export function YBFeedItemComponent(props: YBFeedItemComponentProps) {
     
     return(
         <Card withBorder shadow="sm" radius="md" mb="2em">
-            <YBHeadingComponent onDelete={props.onDelete} clipboardContent={textContent}/>
+            <YBHeadingComponent
+                onDelete={props.onDelete}
+                clipboardContent={textContent}
+                detectedLanguage={detectedLanguage}
+                manualLanguage={manualLanguage}
+                highlightEnabled={highlightEnabled}
+                onHighlightToggle={setHighlightEnabled}
+                onLanguageChange={setManualLanguage}
+            />
             {(item.type===0)&&
-            <YBFeedItemTextComponent>
+            <YBFeedItemTextComponent highlight={highlightEnabled} language={manualLanguage} onLanguageDetected={handleLanguageDetected}>
                 {textContent}
             </YBFeedItemTextComponent>
             }
